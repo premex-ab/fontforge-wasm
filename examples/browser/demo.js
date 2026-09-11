@@ -91,7 +91,7 @@ for (const link of document.querySelectorAll('[data-font-asset]')) {
 
 // Cache public demo assets and examples, never user-selected fonts or outputs.
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register(new URL('../../demo-service-worker.js', import.meta.url))
+  navigator.serviceWorker.register(new URL('../../demo-service-worker.js', import.meta.url), { updateViaCache: 'none' })
     .then(() => navigator.serviceWorker.ready)
     .then(() => { document.documentElement.dataset.offlineReady = 'true'; })
     .catch(() => { document.documentElement.dataset.offlineReady = 'false'; });
