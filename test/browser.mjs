@@ -39,6 +39,14 @@ try {
         await page.locator('#preview').waitFor({ state: 'visible' });
         assert.match(await page.locator('#status').innerText(), /no upload/);
       }
+      for (const [from, to] of [['ttf', 'otf'], ['otf', 'ttf']]) {
+        await page.locator(`[data-sample="${from}"]`).click();
+        await page.locator('#download').waitFor({ state: 'visible', timeout: 60_000 });
+        assert.equal(await page.locator('#download').getAttribute('download'), `Roboto-Regular.${to}`);
+        assert.equal(await page.locator('#font').inputValue(), '');
+        await page.locator('#preview').waitFor({ state: 'visible' });
+        assert.match(await page.locator('#selected-font').innerText(), /Roboto Regular/);
+      }
       // The demo's explicit asset cache makes worker loading reliable offline.
       await page.waitForFunction(() => document.documentElement.dataset.offlineReady === 'true');
       await page.waitForFunction(() => !!navigator.serviceWorker.controller);
@@ -58,6 +66,10 @@ try {
         return new DataView(bytes.buffer).getUint32(0);
       });
       assert.equal(offlineSignature, 0x4f54544f);
+      await page.locator('[data-sample="ttf"]').click();
+      await page.locator('#download').waitFor({ state: 'visible', timeout: 60_000 });
+      assert.equal(await page.locator('#download').getAttribute('download'), 'Roboto-Regular.otf');
+      await page.locator('#preview').waitFor({ state: 'visible' });
       if (engine === chromium) await page.context().setOffline(false);
       await new Promise(resolve => server.listen(port, '127.0.0.1', resolve));
       await mkdir('test/results', { recursive: true });
@@ -65,7 +77,7 @@ try {
       await page.emulateMedia({ colorScheme: 'dark' });
       await page.screenshot({ path: `test/results/${engine.name()}-dark.png`, fullPage: true });
       assert.deepEqual(errors, []);
-      console.log(`${engine.name()}: TTF ↔ OTF, FontFace loading, conversion with asset server stopped, no uploads, no cross-origin isolation`);
+      console.log(`${engine.name()}: TTF ↔ OTF, hosted examples, FontFace loading, conversion with asset server stopped, no uploads, no cross-origin isolation`);
     } finally { await browser.close(); await rm(profile, { recursive: true, force: true }); }
   }
 } finally { server.close(); }

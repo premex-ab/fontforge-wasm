@@ -19,6 +19,9 @@ select,button,.download { padding:10px 16px; border:1px solid var(--line); borde
 button { cursor:pointer; } button[type=submit],.download { background:var(--accent); color:var(--paper); border-color:var(--accent); }
 button:disabled { opacity:.5; cursor:wait; } .download { display:inline-block; text-decoration:none; margin-top:12px; }
 [hidden] { display:none !important; } #status { min-height:1.6em; color:var(--muted); } #preview { font-size:clamp(2rem,5vw,3rem); overflow-wrap:anywhere; }
+.examples { border:0; border-bottom:1px solid var(--line); padding:0 0 20px; margin:0 0 24px; min-width:0; }
+.examples legend { font-size:1.25rem; font-weight:650; } .examples p, #selected-font { color:var(--muted); }
+.examples button[aria-pressed="true"] { background:var(--accent); color:var(--paper); } .sample-links { font-size:.85rem; }
 footer { border-top:1px solid var(--line); margin-top:44px; padding-top:24px; font-size:.85rem; color:var(--muted); }
 </style>
 <header><span class="wordmark">fontforge-wasm</span><span class="tag">Experimental alpha · GPL-3.0+</span></header>
@@ -26,8 +29,15 @@ footer { border-top:1px solid var(--line); margin-top:44px; padding-top:24px; fo
 <h1>Different outlines.<br>Same letters.</h1>
 <p class="intro">Real FontForge, in your browser. Convert a static TrueType or OpenType font locally, with no upload.</p>
 <form class="panel" id="converter">
-<label for="font">Choose a TTF or OTF font</label><br>
-<input id="font" type="file" accept=".ttf,.otf" required>
+<fieldset class="examples">
+<legend>Try a hosted example</legend>
+<p>Roboto Regular, ready to convert. No font file needed.</p>
+<div class="controls"><button type="button" data-sample="ttf" aria-pressed="false">Try TTF → OTF</button><button type="button" data-sample="otf" aria-pressed="false">Try OTF → TTF</button></div>
+<p class="sample-links">Download examples: <a data-font-asset="Roboto-Regular.ttf" download>TTF</a> · <a data-font-asset="Roboto-Regular.otf" download>OTF</a> · <a data-font-asset="LICENSE.txt">Apache 2.0 license</a></p>
+</fieldset>
+<label for="font">Or choose your own font</label><br>
+<input id="font" type="file" accept=".ttf,.otf">
+<p id="selected-font" aria-live="polite">Choose an example above or a font from your device.</p>
 <div class="controls"><label for="format">Convert to</label><select id="format"><option value="otf">OTF · cubic outlines</option><option value="ttf">TTF · quadratic outlines</option></select><button id="convert" type="submit">Convert locally</button><button id="cancel" type="button" hidden>Cancel</button></div>
 <p id="status" role="status" aria-live="polite">The first conversion may take a moment while the engine loads.</p>
 <a class="download" id="download" hidden>Download font</a>
@@ -36,6 +46,6 @@ footer { border-top:1px solid var(--line); margin-top:44px; padding-top:24px; fo
 <p class="tag">Static fonts only · 16 MiB maximum input</p>
 <p>Outline conversion can alter hinting and font tables. Check the result before using it in a project. WOFF2, variable fonts, collections and color fonts are not supported in this alpha.</p>
 </main>
-<footer><a href="https://github.com/warting/fontforge-wasm">Source & documentation</a> · Independent project, not affiliated with FontForge. Conversion runs in memory. No fonts are uploaded. The demo caches its engine for offline use.</footer>
+<footer><a href="https://github.com/warting/fontforge-wasm">Source & documentation</a> · Independent project, not affiliated with FontForge. Conversion runs in memory. No fonts are uploaded. The demo caches its engine and public examples for offline use.</footer>
 <script type="module" src="./demo.js"></script>
 </html>

@@ -13,7 +13,7 @@ await writeFile(`${destination}/index.html`, html.replace('src="./demo.js"', 'sr
 await writeFile(`${destination}/.nojekyll`, '');
 // Invalidate the demo's asset cache whenever a deployed engine or UI changes.
 const hash = createHash('sha256');
-for (const path of ['index.html', 'examples/browser/demo.js', 'src/index.js', 'src/validate.js', 'dist/browser-worker.mjs', 'dist/fontforge-core.wasm']) {
+for (const path of ['index.html', 'examples/browser/demo.js', 'src/index.js', 'src/validate.js', 'dist/browser-worker.mjs', 'dist/fontforge-core.wasm', 'examples/fonts/Roboto-Regular.ttf', 'examples/fonts/Roboto-Regular.otf', 'examples/fonts/LICENSE.txt']) {
   hash.update(await readFile(`${destination}/${path}`));
 }
 const worker = (await readFile('demo-service-worker.js', 'utf8'))

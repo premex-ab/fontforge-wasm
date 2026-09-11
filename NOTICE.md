@@ -32,3 +32,7 @@ cross-compiling FontForge's dependencies. This project's build and wrapper are
 independently implemented; no pdf2htmlEX application code is included.
 
 The synthetic test font was created for this repository and is GPL-3.0-or-later.
+
+The hosted Roboto demo fonts in `examples/fonts/` are licensed separately under
+Apache License 2.0. Their upstream copyright, license, and modification notice
+are included in that directory. They are not licensed under the engine GPL.
