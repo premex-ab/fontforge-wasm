@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { FontForgeError, validateFont, MAX_INPUT_BYTES } from './validate.js';
-export { FontForgeError, MAX_INPUT_BYTES };
+import { FORMATS, getFormat } from './formats.js';
+export { FontForgeError, MAX_INPUT_BYTES, FORMATS };
 let browserAssets;
 function loadBrowserAssets(cache) {
   const load = () => Promise.all([
@@ -15,12 +16,14 @@ function loadBrowserAssets(cache) {
 }
 
 /** Convert in a disposable worker. The caller's input buffer is never detached. */
-export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress, cache = 'default' } = {}) {
-  if (format !== 'ttf' && format !== 'otf') throw new FontForgeError('UNSUPPORTED_FORMAT', 'Output format must be ttf or otf.');
+export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress, cache = 'default', inputFormat, faceIndex = 0 } = {}) {
+  if (!getFormat(format)) throw new FontForgeError('UNSUPPORTED_FORMAT', 'Choose an output format from FORMATS.');
+  if (inputFormat && !getFormat(inputFormat)?.input) throw new FontForgeError('UNSUPPORTED_FONT', 'This input format is not supported; metrics files are export-only.');
+  if (!Number.isInteger(faceIndex) || faceIndex < 0 || faceIndex > 255) throw new FontForgeError('INVALID_FACE_INDEX', 'faceIndex must be an integer from 0 to 255.');
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000) throw new RangeError('timeoutMs must be between 1 and 300000.');
   if (signal?.aborted) throw new FontForgeError('ABORTED', 'Conversion was cancelled.');
   if (cache !== 'default' && cache !== 'no-store') throw new TypeError('cache must be default or no-store.');
-  validateFont(input);
+  validateFont(input, inputFormat);
   // Buffer.slice() in Node shares storage; Uint8Array.from() always copies.
   const bytes = Uint8Array.from(input);
   const isNode = typeof process !== 'undefined' && !!process.versions?.node;
@@ -70,6 +73,7 @@ export async function convert(input, { format, signal, timeoutMs = 30_000, onPro
         // Keep engine assets in memory so fresh workers need no network, even
         // where a browser does not cache module-worker dependency requests.
         report({ stage: 'worker', message: 'Starting conversion worker' });
+        if (finished) return;
         workerUrl = URL.createObjectURL(new Blob([assets.code], { type: 'text/javascript' }));
         worker = new Worker(workerUrl);
         wasmBinary = assets.wasmBinary;
@@ -77,7 +81,7 @@ export async function convert(input, { format, signal, timeoutMs = 30_000, onPro
         worker.onerror = failed;
         worker.onmessageerror = () => failed(new Error('Invalid message from conversion worker.'));
       }
-      worker.postMessage({ bytes, format, wasmBinary }, [bytes.buffer]);
+      worker.postMessage({ bytes, format, wasmBinary, inputFormat, faceIndex }, [bytes.buffer]);
     })().catch(failed);
   });
 }

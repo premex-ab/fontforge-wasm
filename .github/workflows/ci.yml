@@ -27,10 +27,11 @@ jobs:
       - run: node build/assemble.mjs
       - run: |
           python3 -m venv .venv
-          .venv/bin/pip install fonttools==4.59.0
+          .venv/bin/pip install fonttools==4.59.0 brotli==1.2.0
           .venv/bin/python test/make-fixtures.py
           npm test
           .venv/bin/python test/verify-output.py
+          .venv/bin/python test/verify-formats.py
       - run: |
           npm ci
           npx playwright install --with-deps chromium webkit

@@ -23,12 +23,13 @@ conversion and browser font loading. No external application is needed.
 ## Native changes
 
 `build/sources.json` pins archives and their SHA-256 digests. `build/patch.py`
-contains small checked platform changes. The C adapter exposes only a narrow
+contains small checked platform changes; `native/patch-formats.py` preserves
+Unicode information in Type 11 exports. The C adapter exposes only a narrow
 conversion ABI, not a general scripting interface. Keep browser filesystem access
 inside Emscripten's in-memory filesystem and run each job in its own worker.
 The WASM memory ceiling is a linear-memory limit, not a total process limit.
 
-Changes to upstream or native dependencies must pass both conversion directions,
+Changes to upstream or native dependencies must pass the complete format matrix,
 round trips, independent fontTools checks, cancellation and browser tests.
 Do not broaden the supported-format matrix before adding fixtures and validation.
 

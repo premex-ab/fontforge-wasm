@@ -7,11 +7,15 @@ their Apache license; they are not covered by the engine's GPL license.
 `Roboto-Regular.ttf` is the unmodified hinted font from:
 https://github.com/googlefonts/roboto/blob/38062f4b4a0be4346d07a928408da21602545e9e/src/hinted/Roboto-Regular.ttf
 
-`Roboto-Regular.otf` is a modified version generated from that TTF with this
-project's FontForge 20251009 WASM engine, converting quadratic outlines to CFF.
-It is a demo derivative, not an official Google OTF release. Copyright and license
-metadata are preserved. Run `node examples/fonts/generate-otf.mjs` after building
-the engine to regenerate it. `checksums.json` records the checked-in files.
+The other `Roboto-Regular.*` files are modified demo derivatives generated
+from that TTF by this project's FontForge 20251009 WASM engine. They are not
+original Google releases. They retain applicable copyright/license metadata;
+all are distributed with `LICENSE.txt` and this modification notice. Legacy
+formats can lose metadata, shaping tables and character coverage. FON is a
+16-pixel Windows ANSI bitmap font. Metrics files have no outlines. UFO is zipped;
+TTC contains one face.
 
-Only these public sample fonts are cached for offline demos. User-selected fonts
-and conversion outputs are never added to the service worker cache.
+Run `node examples/fonts/generate-examples.mjs` after building the engine to
+regenerate every derivative. `checksums.json` records the checked-in files.
+TTF/OTF are preloaded for the offline demo. Other public examples are cached on
+first use. User-selected fonts and outputs are never added to the offline cache.

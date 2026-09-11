@@ -45,15 +45,34 @@ RUN python3 /product/build/fetch.py libxml2 && cd /work/libxml2 \
     --without-iconv --without-http --without-ftp --with-zlib=$PREFIX \
     && emmake make -j4 install
 RUN python3 /product/build/fetch.py fontforge
-FROM dependencies AS builder
+FROM dependencies AS codecs
+RUN python3 /product/build/fetch.py brotli \
+    && emcmake cmake -S /work/brotli -B /work/brotli/out -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=OFF -DBROTLI_BUILD_TOOLS=OFF \
+    && cmake --build /work/brotli/out -j4 --target install
+RUN python3 /product/build/fetch.py woff2 \
+    && printf '\ntarget_link_libraries(woff2dec /opt/wasm/lib/libbrotlicommon.a)\ntarget_link_libraries(woff2enc /opt/wasm/lib/libbrotlicommon.a)\n' >> /work/woff2/CMakeLists.txt \
+    && emcmake cmake -S /work/woff2 -B /work/woff2/out -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_INSTALL_LIBDIR=lib -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=OFF -DNOISY_LOGGING=OFF \
+    -DCMAKE_PREFIX_PATH=$PREFIX -DCMAKE_FIND_ROOT_PATH=$PREFIX \
+    && cmake --build /work/woff2/out -j4 --target install
+RUN python3 /product/build/fetch.py libiconv && cd /work/libiconv \
+    && emconfigure ./configure --host=wasm32-unknown-emscripten --prefix=$PREFIX \
+    --disable-shared --disable-nls --disable-extra-encodings \
+    && emmake make -j4 install
+FROM codecs AS builder
 COPY native /product/native
 RUN python3 /product/build/patch.py fontforge \
+    && python3 /product/native/patch-formats.py \
     && emcmake cmake -S /work/fontforge -B /work/fontforge/out -G Ninja \
     -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH=$PREFIX -DCMAKE_FIND_ROOT_PATH=$PREFIX \
+    -DIconv_IS_BUILT_IN=FALSE -DIconv_INCLUDE_DIR=$PREFIX/include -DIconv_LIBRARY=$PREFIX/lib/libiconv.a \
     -DBUILD_SHARED_LIBS=OFF -DENABLE_GUI=OFF -DENABLE_NATIVE_SCRIPTING=OFF \
     -DENABLE_PYTHON_SCRIPTING=OFF -DENABLE_PYTHON_EXTENSION=OFF -DENABLE_LIBSPIRO=OFF \
     -DENABLE_LIBGIF=OFF -DENABLE_LIBJPEG=OFF -DENABLE_LIBPNG=OFF -DENABLE_LIBREADLINE=OFF \
-    -DENABLE_LIBTIFF=OFF -DENABLE_WOFF2=OFF -DENABLE_HARFBUZZ=OFF -DENABLE_DOCS=OFF \
+    -DENABLE_LIBTIFF=OFF -DENABLE_WOFF2=ON -DENABLE_HARFBUZZ=OFF -DENABLE_DOCS=OFF \
     && cmake --build /work/fontforge/out --target fontforge-wasm -j4
 RUN mkdir -p /output/dist /output/sources \
     && cp /work/fontforge/out/wasm-wrapper/fontforge-core.* /output/dist/ \

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { mkdir, readFile, writeFile, readdir } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, readdir, rm } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 const destination = 'artifacts/release';
+await rm(destination, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
 execFileSync('npm', ['pack', '--pack-destination', destination], { stdio: 'inherit' });
 execFileSync('tar', ['czf', `${destination}/upstream-sources.tar.gz`, '-C', 'artifacts', 'sources']);

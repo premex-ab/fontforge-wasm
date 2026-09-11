@@ -40,3 +40,35 @@ for kind in ['ttf', 'otf']:
     fb.font.recalcTimestamp = False
     fb.font['head'].created = fb.font['head'].modified = 3800000000
     fb.save(root / f'fixture.{kind}')
+
+# Independently encoded webfonts exercise both TrueType and CFF flavours.
+from fontTools.ttLib import TTFont, TTCollection, newTable
+from fontTools.ttLib.tables.DefaultTable import DefaultTable
+for kind in ['ttf', 'otf']:
+    for flavor in ['woff', 'woff2']:
+        font = TTFont(root / f'fixture.{kind}')
+        font.flavor = flavor
+        font.save(root / f'{kind}.{flavor}')
+for flavor in ['woff', 'woff2']:
+    font = TTFont(root / 'fixture.ttf')
+    font['fvar'] = newTable('fvar')
+    font['fvar'].axes = []
+    font['fvar'].instances = []
+    font.flavor = flavor
+    font.save(root / f'variable.{flavor}')
+collection = TTCollection()
+collection.fonts = [TTFont(root / 'fixture.ttf'), TTFont(root / 'fixture.otf')]
+for record in collection.fonts[1]['name'].names:
+    if record.nameID in [1, 4]: record.string = 'Second Face'.encode(record.getEncoding())
+collection.save(root / 'collection.ttc')
+
+# A small original UFO fixture, compressed with Python's independent ZIP codec.
+import plistlib, zipfile
+meta = plistlib.dumps(dict(creator='fontforge-wasm-tests', formatVersion=3))
+info = plistlib.dumps(dict(familyName='Wasm Test', styleName='Regular', unitsPerEm=1000, ascender=800, descender=-200))
+with zipfile.ZipFile(root / 'compressed.ufo.zip', 'w', compression=zipfile.ZIP_DEFLATED) as archive:
+    archive.writestr('fixture.ufo/metainfo.plist', meta)
+    archive.writestr('fixture.ufo/fontinfo.plist', info)
+    archive.writestr('fixture.ufo/layercontents.plist', plistlib.dumps([['public.default', 'glyphs']]))
+    archive.writestr('fixture.ufo/glyphs/contents.plist', plistlib.dumps({'A': 'A.glif'}))
+    archive.writestr('fixture.ufo/glyphs/A.glif', '<glyph name="A" format="2"><advance width="600"/><unicode hex="0041"/><outline><contour><point x="0" y="0" type="line"/><point x="300" y="700" type="line"/><point x="600" y="0" type="line"/></contour></outline></glyph>')

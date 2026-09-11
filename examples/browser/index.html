@@ -24,30 +24,33 @@ button:disabled { opacity:.5; cursor:wait; } .download { display:inline-block; t
 .examples button[aria-pressed="true"] { background:var(--accent); color:var(--paper); } .sample-links { font-size:.85rem; }
 .activity { margin-top:24px; border-top:1px solid var(--line); padding-top:16px; } .activity h2 { font-size:1rem; margin:0; } .activity p { font-size:.85rem; color:var(--muted); }
 #activity-log { max-height:240px; min-height:64px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:12px/1.8 ui-monospace,monospace; padding:12px; border:1px solid var(--line); border-radius:8px; }
+#example-buttons { gap:8px; } #example-buttons button { font-size:.85rem; padding:8px 12px; } #format-note { font-size:.85rem; color:var(--muted); } .table-scroll { overflow:auto; } table { border-collapse:collapse; width:100%; font-size:.85rem; } th,td { text-align:left; padding:10px; border-bottom:1px solid var(--line); } summary { cursor:pointer; font-weight:600; }
 footer { border-top:1px solid var(--line); margin-top:44px; padding-top:24px; font-size:.85rem; color:var(--muted); }
 </style>
 <header><span class="wordmark">fontforge-wasm</span><span class="tag">Experimental alpha · GPL-3.0+</span></header>
 <main>
 <h1>Different outlines.<br>Same letters.</h1>
-<p class="intro">Real FontForge, in your browser. Convert a static TrueType or OpenType font locally, with no upload.</p>
+<p class="intro">Real FontForge, in your browser. Convert static fonts and explore web, desktop and legacy formats locally, with no upload.</p>
 <form class="panel" id="converter">
 <fieldset class="examples">
 <legend>Try a hosted example</legend>
 <p>Select a Roboto Regular example, choose an output format, then press Convert locally.</p>
-<div class="controls"><button type="button" data-sample="ttf" aria-pressed="false">Use TTF example</button><button type="button" data-sample="otf" aria-pressed="false">Use OTF example</button></div>
+<div class="controls" id="example-buttons"></div>
 <p class="sample-links">Download examples: <a data-font-asset="Roboto-Regular.ttf" download>TTF</a> · <a data-font-asset="Roboto-Regular.otf" download>OTF</a> · <a data-font-asset="LICENSE.txt">Apache 2.0 license</a></p>
 </fieldset>
 <label for="font">Or choose your own font</label><br>
-<input id="font" type="file" accept=".ttf,.otf">
+<input id="font" type="file" accept=".ttf,.otf,.woff,.woff2,.eot,.svg,.pfa,.pfb,.cff,.t42,.ps,.pt3,.dfont,.suit,.bin,.zip,.ttc,.fon,.t11">
 <p id="selected-font" aria-live="polite">Choose an example above or a font from your device.</p>
 <div class="controls"><label for="format">Convert to</label><select id="format"><option value="otf">OTF · cubic outlines</option><option value="ttf">TTF · quadratic outlines</option></select><button id="convert" type="submit">Convert locally</button><button id="cancel" type="button" hidden>Cancel</button></div>
+<p id="format-note"></p><label id="face-control" hidden>Collection face index (starts at 0) <input id="face-index" type="number" min="0" max="255" step="1" value="0"></label>
 <p id="status" role="status" aria-live="polite">The first conversion may take a moment while the engine loads.</p>
 <a class="download" id="download" hidden>Download font</a>
 <div id="preview" hidden>The proof is in the letters.<br>Aa Bb Cc 0123456789</div>
 </form>
 <section class="activity" aria-labelledby="activity-heading"><h2 id="activity-heading">Activity log</h2><p>Elapsed time starts when you press Convert. The total includes engine loading and preview. Cached assets can make later runs faster. Example selection is separate.</p><div class="controls"><button id="reset-cache" type="button">Clear demo cache &amp; reload</button><a id="normal-mode" hidden>Return to normal caching</a></div><p id="cache-note">Reset clears this demo’s offline cache and selected font, then reloads with engine and example caching bypassed. Other sites are unaffected.</p><div id="activity-log" role="log" aria-live="polite" aria-label="Timestamped activity log" tabindex="0">Waiting for a font selection.</div></section>
 <p class="tag">Static fonts only · 16 MiB maximum input</p>
-<p>Outline conversion can alter hinting and font tables. Check the result before using it in a project. WOFF2, variable fonts, collections and color fonts are not supported in this alpha.</p>
+<p>Outline conversion can alter hinting and font tables. Check the result before using it in a project. Variable and color fonts are not supported. Legacy formats can lose layout features or character mappings; see the format notes below.</p>
+<details class="support"><summary>Supported formats and limitations</summary><div class="table-scroll"><table><thead><tr><th>Format</th><th>Import</th><th>Export</th><th>Notes</th></tr></thead><tbody id="format-support"></tbody></table></div></details>
 </main>
 <footer><a href="https://github.com/warting/fontforge-wasm">Source & documentation</a> · Independent project, not affiliated with FontForge. Conversion runs in memory. No fonts are uploaded. The demo caches its engine and public examples for offline use.</footer>
 <script type="module" src="./demo.js"></script>

@@ -4,7 +4,7 @@
 
 **[Try the live demo →](https://warting.github.io/fontforge-wasm/)**
 
-Select a hosted Roboto TTF or OTF example, or choose
+Select a hosted Roboto example in any supported input format, or choose
 your own font. Demo fonts retain their Apache 2.0 license; see
 [their provenance and license](examples/fonts/README.md). Press **Convert locally** to start.
 The timestamped activity log shows engine loading, worker initialization, native
@@ -16,7 +16,7 @@ paused. Each conversion in this mode fetches the engine again. CDN, connection
 and WASM compilation caches are outside the demo’s control. Return to normal
 caching using the link beside the button.
 
-Convert static TrueType and OpenType/CFF fonts in a browser or Node.js worker.
+Convert static web, desktop and legacy fonts in a browser or Node.js worker.
 Fonts stay in the worker's memory. There is no upload, server fallback, telemetry,
 Python runtime or FontForge GUI.
 
@@ -30,7 +30,7 @@ Download the npm-compatible `.tgz` from [Releases](https://github.com/warting/fo
 and install it:
 
 ```sh
-npm install ./warting-fontforge-wasm-0.1.0-alpha.1.tgz
+npm install ./warting-fontforge-wasm-0.2.0-alpha.1.tgz
 ```
 
 The alpha is distributed through GitHub Releases; an npm registry publication is
@@ -74,27 +74,56 @@ const result = await convert(bytes, {
 
 `convert()` returns `Promise<Uint8Array>`. Errors expose a `code`, including
 `UNSUPPORTED_FORMAT`, `UNSUPPORTED_FONT`, `INVALID_FONT`, `INPUT_TOO_LARGE`,
-`ABORTED`, `TIMEOUT`, `WORKER_ERROR` and `CONVERSION_FAILED`.
+`INVALID_FACE_INDEX`, `ABORTED`, `TIMEOUT`, `WORKER_ERROR` and `CONVERSION_FAILED`.
 
 ## Supported in this alpha
 
-| Input | Output | Conversion |
-| --- | --- | --- |
-| Static TTF with quadratic outlines | OTF/CFF | FontForge converts outlines to cubic curves |
-| Static OTF/CFF | TTF | FontForge approximates cubic outlines with quadratic curves |
-| Static TTF or OTF/CFF | Same format | FontForge regenerates the font |
+| Formats | Import | Export | Details |
+| --- | --- | --- | --- |
+| TTF, OTF, WOFF, WOFF2 | Yes | Yes | Static TrueType/CFF; webfont outputs use quadratic outlines |
+| EOT | Yes | Yes | Uncompressed; compressed/XOR-obfuscated variants are rejected |
+| SVG | Yes | Yes | Legacy SVG fonts, not illustrations |
+| PFA, PFB, PS, PT3, CFF, T42 | Yes | Yes | PostScript font resources; PS exports Type 1; CFF is raw |
+| T11 | Yes | Yes | CID-keyed TrueType; exported CID mapping covers BMP Unicode |
+| DFONT, SUIT, BIN | Yes | Yes | Mac data-fork/MacBinary fonts; SUIT and BIN use portable MacBinary wrappers |
+| TTC | Yes | Yes | `faceIndex` selects the imported face; export contains one face |
+| UFO | Yes | Yes | ZIP containing one UFO source directory; export is `.ufo.zip` |
+| FON | Yes | Yes | Export: 16 px Windows ANSI bitmap. Import: rectangular pixel contours, no smoothing |
+| AFM, PFM, TFM | No | Yes | Metrics only, with no outlines; PFM/TFM use Windows ANSI encoding |
 
-WOFF and WOFF2 are containers: decode them with an appropriate codec first, then
-pass the resulting TTF/OTF bytes to this engine. WOFF2 is **not** implemented here
-yet. Variable fonts, CFF2, collections and color fonts are rejected. Type 1, SVG,
-UFO and other FontForge formats are outside this alpha's API.
+The exported `FORMATS` registry describes capabilities, file extensions and notes.
+Variable fonts, CFF2, color fonts, multiple-master fonts and CID subfont collections
+remain unsupported. Unsupported SFNT tables are checked **after** WOFF/WOFF2
+decoding too. Type 11 imports without an embedded Unicode cmap may not recover
+character mappings: a CID number alone is not necessarily a Unicode code point.
+
+```js
+const woff2 = await convert(input, { format: 'woff2' });
+const secondFace = await convert(ttcBytes, { format: 'ttf', faceIndex: 1 });
+const ufoZip = await convert(input, { format: 'ufo' });
+const fromUfo = await convert(ufoZip, { format: 'otf', inputFormat: 'ufo' });
+const metrics = await convert(input, { format: 'afm' });
+```
+
+`inputFormat` is optional; bytes are inspected. It disambiguates PostScript and
+MacBinary aliases. The existing `convert(bytes, options)` API still returns font
+bytes (ZIP bytes for UFO, metrics bytes for AFM/PFM/TFM). No separate local/server
+mode is needed. EOT/TTC/ZIP containers are handled by the wrapper; FontForge,
+WOFF2, Brotli, zlib and legacy encoding conversion run in WebAssembly.
+
+`onProgress(event)` reports real lifecycle stages with an optional measured
+`durationMs` for the native conversion. Observer exceptions are ignored.
+`cache: 'no-store'` bypasses browser HTTP and in-memory engine asset caching.
+Legacy demo previews use a separately logged TTF conversion; metrics previews
+show the source font and are labelled accordingly.
 
 Outline conversion is not lossless. Hinting and unsupported/custom tables can
 change or disappear. Inspect rendered text and validate output before production
 use. The tests cover synthetic outlines, Unicode mappings, advance widths, font
 names, ligature and kerning tables; they do not establish compatibility with all
-fonts. Input is limited to 16 MiB, WASM linear memory to 512 MiB, and the default
-wall-clock timeout is 30 seconds (including startup/download). Worker overhead
+fonts. Input and decoded webfonts are limited to 16 MiB; UFO extraction is limited to
+4096 entries and 64 MiB total, each file at most 16 MiB. WASM linear memory is
+limited to 512 MiB, and the default wall-clock timeout is 30 seconds (including startup/download). Worker overhead
 and JavaScript buffers consume additional memory.
 
 ## Browsers and bundlers
@@ -118,17 +147,18 @@ user-selected fonts or their conversion outputs.
 
 ## Build and test
 
-Requirements: Docker with BuildKit, Node.js 22+, Python 3 and fontTools 4.59.0 for
+Requirements: Docker with BuildKit, Node.js 22+, Python 3 and fontTools 4.59.0 with Brotli 1.2.0 for
 independent output verification.
 
 ```sh
 npm ci
 npm run build
 python3 -m venv .venv
-.venv/bin/pip install fonttools==4.59.0
+.venv/bin/pip install fonttools==4.59.0 brotli==1.2.0
 .venv/bin/python test/make-fixtures.py
 npm test
 .venv/bin/python test/verify-output.py
+.venv/bin/python test/verify-formats.py
 npm pack
 ```
 
@@ -148,7 +178,7 @@ python3 -m http.server 8090
 ## Roadmap
 
 - Broader real-world font corpus and fuzz testing.
-- WOFF/WOFF2 integration without an upload or a separate conversion mode.
+- Compressed EOT, variable/color fonts and richer collection handling.
 - Smaller download and lower startup cost.
 - Bundler recipes, reusable worker pool and batch conversion.
 - Additional formats only when their conversion paths are tested.

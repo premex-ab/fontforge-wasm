@@ -22,7 +22,7 @@ for (const [from, to] of [['ttf', 'otf'], ['otf', 'ttf']]) {
 test('bad input, unsupported format, size limit and cancellation', async () => {
   await assert.rejects(convert(new Uint8Array(20), { format: 'ttf' }), { code: 'UNSUPPORTED_FONT' });
   await assert.rejects(convert(new Uint8Array(2), { format: 'ttf' }), { code: 'INVALID_FONT' });
-  await assert.rejects(convert(new Uint8Array(2), { format: 'woff2' }), { code: 'UNSUPPORTED_FORMAT' });
+  await assert.rejects(convert(new Uint8Array(2), { format: 'pdf' }), { code: 'UNSUPPORTED_FORMAT' });
   await assert.rejects(convert(new Uint8Array(MAX_INPUT_BYTES + 1), { format: 'ttf' }), { code: 'INPUT_TOO_LARGE' });
   const input = await readFile(new URL('fixture.ttf', fixtures));
   await assert.rejects(convert(input, { format: 'otf', signal: AbortSignal.abort() }), { code: 'ABORTED' });

@@ -5,6 +5,7 @@ import { readFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, extname, sep } from 'node:path';
 import assert from 'node:assert/strict';
+import { FORMATS } from '../src/formats.js';
 const root = resolve('.');
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.html': 'text/html' };
 const server = createServer(async (req, res) => {
@@ -60,6 +61,28 @@ try {
         assert.match(log, /FontForge conversion finished · \d+\.\d{3}s/);
         assert.match(log, /total from Convert click/);
       }
+      // Every public example is a real selectable input, and every output
+      // can be downloaded. Legacy previews use a labelled separate TTF job.
+      for (const definition of FORMATS.filter(f => f.input)) {
+        await page.locator(`[data-sample="${definition.id}"]`).click();
+        await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+        assert.equal(await page.locator('#download').isVisible(), false);
+        await page.locator('#format').selectOption('ttf');
+        await page.locator('#convert').click();
+        await page.waitForFunction(() => !document.querySelector('#convert').disabled, undefined, { timeout: 60000 });
+        assert.equal(await page.locator('#download').isVisible(), true, `${definition.id} example failed: ${await page.locator('#status').innerText()}`);
+        assert.equal(await page.locator('#preview').isVisible(), true, `${definition.id} preview failed`);
+      }
+      await page.locator('[data-sample="woff2"]').click();
+      await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+      for (const definition of FORMATS) {
+        await page.locator('#format').selectOption(definition.id);
+        await page.locator('#convert').click();
+        await page.waitForFunction(() => !document.querySelector('#convert').disabled, undefined, { timeout: 60000 });
+        assert.equal(await page.locator('#download').isVisible(), true, `${definition.id} export failed: ${await page.locator('#status').innerText()}`);
+        assert.equal(await page.locator('#download').getAttribute('download'), `Roboto-Regular.${definition.extension || definition.id}`);
+        assert.equal(await page.locator('#preview').isVisible(), true, `${definition.id} export preview failed`);
+      }
       // The demo's explicit asset cache makes worker loading reliable offline.
       await page.waitForFunction(() => document.documentElement.dataset.offlineReady === 'true');
       await page.waitForFunction(() => !!navigator.serviceWorker.controller);
@@ -79,12 +102,12 @@ try {
         return new DataView(bytes.buffer).getUint32(0);
       });
       assert.equal(offlineSignature, 0x4f54544f);
-      await page.locator('[data-sample="ttf"]').click();
+      await page.locator('[data-sample="woff2"]').click();
       await page.waitForFunction(() => !document.querySelector('#convert').disabled);
       assert.equal(await page.locator('#download').isVisible(), false, 'Selecting an example must not convert');
       await page.locator('#convert').click();
       await page.locator('#download').waitFor({ state: 'visible', timeout: 60_000 });
-      assert.equal(await page.locator('#download').getAttribute('download'), 'Roboto-Regular.otf');
+      assert.equal(await page.locator('#download').getAttribute('download'), 'Roboto-Regular.ttf');
       await page.locator('#preview').waitFor({ state: 'visible' });
       if (engine === chromium) await page.context().setOffline(false);
       await new Promise(resolve => server.listen(port, '127.0.0.1', resolve));
@@ -93,7 +116,7 @@ try {
       await page.emulateMedia({ colorScheme: 'dark' });
       await page.screenshot({ path: `test/results/${engine.name()}-dark.png`, fullPage: true });
       assert.deepEqual(errors, []);
-      console.log(`${engine.name()}: TTF ↔ OTF, hosted examples, FontFace loading, conversion with asset server stopped, no uploads, no cross-origin isolation`);
+      console.log(`${engine.name()}: 19 hosted input formats, 22 exports, FontFace previews, WOFF2 with asset server stopped, no uploads, no cross-origin isolation`);
     } finally { await browser.close(); await rm(profile, { recursive: true, force: true }); }
   }
 } finally { server.close(); }

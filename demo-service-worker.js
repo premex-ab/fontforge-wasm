@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Demo-only offline cache: application/engine assets, never user font files.
-const VERSION = 'fontforge-wasm-demo-0.1.0-alpha.1-samples';
+const VERSION = 'fontforge-wasm-demo-0.2.0-alpha.1-formats';
 const ASSETS = [
   'examples/browser/', 'examples/browser/demo.js',
   'examples/fonts/Roboto-Regular.ttf', 'examples/fonts/Roboto-Regular.otf', 'examples/fonts/LICENSE.txt',
-  'src/index.js', 'src/validate.js', 'src/browser-worker.js', 'src/runtime.js',
+  'src/formats.js', 'src/containers.js', 'src/index.js', 'src/validate.js', 'src/browser-worker.js', 'src/runtime.js',
   'dist/browser-worker.mjs', 'dist/fontforge-core.wasm',
 ].map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => {
@@ -24,7 +24,8 @@ self.addEventListener('fetch', event => {
   const scope = new URL(self.registration.scope);
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
   const navigation = request.mode === 'navigate';
-  if (!navigation && !ASSETS.includes(request.url) && !url.pathname.startsWith(scope.pathname + 'releases/')) return;
+  const publicExample = /\/examples\/fonts\/Roboto-Regular\.[a-z0-9.]+$/.test(url.pathname);
+  if (!navigation && !publicExample && !ASSETS.includes(request.url) && !url.pathname.startsWith(scope.pathname + 'releases/')) return;
   event.respondWith((async () => {
     const cache = await caches.open(VERSION);
     if (navigation) {
@@ -40,6 +41,8 @@ self.addEventListener('fetch', event => {
       const previous = await (await caches.open(key)).match(request);
       if (previous) return previous;
     }
-    return fetch(request);
+    const response = await fetch(request);
+    if (publicExample && response.ok) await cache.put(request, response.clone());
+    return response;
   })());
 });

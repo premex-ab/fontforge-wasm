@@ -17,6 +17,8 @@ Pinned native dependencies are recorded in `build/sources.json`:
 - libffi: MIT and included upstream notices.
 - PCRE2: BSD-3-Clause and included upstream notices.
 - zlib: zlib license.
+- WOFF2 and Brotli: MIT licenses.
+- GNU libiconv/libcharset: LGPL-2.1-or-later library code and included notices.
 - Emscripten runtime and bundled system libraries: see `licenses/emscripten/`.
 
 For each binary release, the matching Git tag supplies this project's complete
