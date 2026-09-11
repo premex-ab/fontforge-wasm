@@ -45,6 +45,9 @@ try {
       assert.equal(await page.evaluate(()=>document.documentElement.dataset.oldScript),undefined);
       for(const from of ['ttf','otf']) {
         await page.locator(`[data-sample="${from}"]`).click();
+        await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+        assert.equal(await page.locator('#download').isVisible(), false, 'Selecting an example must not convert');
+        await page.locator('#convert').click();
         await page.locator('#download').waitFor({state:'visible',timeout:60000});
         await page.locator('#preview').waitFor({state:'visible'});
       }
@@ -52,6 +55,9 @@ try {
       await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();});
       await page.reload();
       await page.locator('[data-sample="ttf"]').click();
+      await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+      assert.equal(await page.locator('#download').isVisible(), false, 'Selecting an example must not convert');
+      await page.locator('#convert').click();
       await page.locator('#download').waitFor({state:'visible',timeout:60000});
       console.log(`${engine.name()}: existing stale cache upgraded; both hosted examples work`);
     } finally {await context.close();await rm(profile,{recursive:true,force:true});}

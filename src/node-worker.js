@@ -2,6 +2,6 @@
 import { parentPort } from 'node:worker_threads';
 import { run } from './runtime.js';
 parentPort.once('message', async data => {
-  const result = await run(data);
+  const result = await run(data, progress => parentPort.postMessage({ progress }));
   parentPort.postMessage(result, result.bytes ? [result.bytes.buffer] : []);
 });

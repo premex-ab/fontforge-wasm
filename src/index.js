@@ -14,7 +14,7 @@ function loadBrowserAssets() {
 }
 
 /** Convert in a disposable worker. The caller's input buffer is never detached. */
-export async function convert(input, { format, signal, timeoutMs = 30_000 } = {}) {
+export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress } = {}) {
   if (format !== 'ttf' && format !== 'otf') throw new FontForgeError('UNSUPPORTED_FORMAT', 'Output format must be ttf or otf.');
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000) throw new RangeError('timeoutMs must be between 1 and 300000.');
   if (signal?.aborted) throw new FontForgeError('ABORTED', 'Conversion was cancelled.');
@@ -36,7 +36,12 @@ export async function convert(input, { format, signal, timeoutMs = 30_000 } = {}
       else resolve(result);
     };
     const abort = () => finish(new FontForgeError('ABORTED', 'Conversion was cancelled.'));
+    const report = event => {
+      if (finished) return;
+      try { onProgress?.(event); } catch { /* Observers cannot interrupt conversion. */ }
+    };
     const receive = data => {
+      if (data.progress) { report(data.progress); return; }
       if (data.error) finish(new FontForgeError(data.error.code, data.error.message));
       else finish(null, new Uint8Array(data.bytes));
     };
@@ -47,6 +52,7 @@ export async function convert(input, { format, signal, timeoutMs = 30_000 } = {}
     (async () => {
       let wasmBinary;
       if (isNode) {
+        report({ stage: 'worker', message: 'Starting conversion worker' });
         const { Worker } = await import('node:worker_threads');
         if (finished) return;
         worker = new Worker(new URL('./node-worker.js', import.meta.url), { execArgv: [] });
@@ -56,10 +62,12 @@ export async function convert(input, { format, signal, timeoutMs = 30_000 } = {}
           if (!finished) failed(new Error(`Worker exited before returning a font (${code}).`));
         });
       } else {
+        report({ stage: 'assets', message: browserAssets ? 'Reusing engine assets in memory' : 'Loading engine assets (network or browser cache)' });
         const assets = await loadBrowserAssets();
         if (finished) return;
         // Keep engine assets in memory so fresh workers need no network, even
         // where a browser does not cache module-worker dependency requests.
+        report({ stage: 'worker', message: 'Starting conversion worker' });
         workerUrl = URL.createObjectURL(new Blob([assets.code], { type: 'text/javascript' }));
         worker = new Worker(workerUrl);
         wasmBinary = assets.wasmBinary;

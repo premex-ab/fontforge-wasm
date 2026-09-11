@@ -50,3 +50,13 @@ test('concurrent jobs use isolated state', async () => {
   assert.equal(new DataView(a.buffer).getUint32(0), 0x4f54544f);
   assert.equal(new DataView(b.buffer).getUint32(0), 0x10000);
 });
+test('reports real worker stages and native duration without observers breaking conversion', async () => {
+  const input = await readFile(new URL('fixture.ttf', fixtures));
+  const events = [];
+  await convert(input, { format: 'otf', onProgress(event) { events.push(event); } });
+  assert.deepEqual(events.map(event => event.stage), ['worker', 'initialize', 'input', 'convert', 'converted', 'output']);
+  assert.ok(Number.isFinite(events.find(event => event.stage === 'converted').durationMs));
+  assert.ok(events.find(event => event.stage === 'converted').durationMs >= 0);
+  const output = await convert(input, { format: 'otf', onProgress() { throw new Error('Observer failed'); } });
+  assert.equal(new DataView(output.buffer).getUint32(0), 0x4f54544f);
+});

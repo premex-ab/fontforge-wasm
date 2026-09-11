@@ -1,6 +1,14 @@
 export type FontFormat = 'ttf' | 'otf';
+export interface ConversionProgress {
+  stage: 'assets' | 'worker' | 'initialize' | 'input' | 'convert' | 'converted' | 'output';
+  message: string;
+  /** Measured inside the worker for the native conversion stage. */
+  durationMs?: number;
+}
 export interface ConvertOptions {
   format: FontFormat;
+  /** Lifecycle events. Exceptions thrown by this observer are ignored. */
+  onProgress?: (event: ConversionProgress) => void;
   /** Terminates the worker and discards its in-memory files. */
   signal?: AbortSignal;
   /** Includes worker startup and WASM loading. Default 30000, maximum 300000. */

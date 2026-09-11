@@ -29,6 +29,8 @@ try {
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
       page.on('request', req => assert.equal(req.method(), 'GET', 'The demo must not upload fonts'));
+      let workers = 0;
+      page.on('worker', () => workers++);
       await page.goto(`${url}/examples/browser/`);
       assert.equal(await page.evaluate(() => crossOriginIsolated), false);
       for (const [from, to] of [['ttf', 'otf'], ['otf', 'ttf']]) {
@@ -40,12 +42,23 @@ try {
         assert.match(await page.locator('#status').innerText(), /no upload/);
       }
       for (const [from, to] of [['ttf', 'otf'], ['otf', 'ttf']]) {
+        const workersBefore = workers;
         await page.locator(`[data-sample="${from}"]`).click();
+        await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+        assert.equal(await page.locator('#download').isVisible(), false, 'Selecting an example must not convert');
+        assert.equal(workers, workersBefore, 'Selection must not start a conversion worker');
+        await page.locator('#convert').click();
         await page.locator('#download').waitFor({ state: 'visible', timeout: 60_000 });
         assert.equal(await page.locator('#download').getAttribute('download'), `Roboto-Regular.${to}`);
         assert.equal(await page.locator('#font').inputValue(), '');
         await page.locator('#preview').waitFor({ state: 'visible' });
-        assert.match(await page.locator('#selected-font').innerText(), /Roboto Regular/);
+        assert.match(await page.locator('#selected-font').innerText(), /Roboto-Regular/);
+        await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+        const log = await page.locator('#activity-log').innerText();
+        assert.match(log, /\d{2}:\d{2}:\d{2}\.\d{3} UTC \+0\.\d{3}s/);
+        assert.match(log, /Initializing WebAssembly/);
+        assert.match(log, /FontForge conversion finished · \d+\.\d{3}s/);
+        assert.match(log, /total from Convert click/);
       }
       // The demo's explicit asset cache makes worker loading reliable offline.
       await page.waitForFunction(() => document.documentElement.dataset.offlineReady === 'true');
@@ -67,6 +80,9 @@ try {
       });
       assert.equal(offlineSignature, 0x4f54544f);
       await page.locator('[data-sample="ttf"]').click();
+      await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+      assert.equal(await page.locator('#download').isVisible(), false, 'Selecting an example must not convert');
+      await page.locator('#convert').click();
       await page.locator('#download').waitFor({ state: 'visible', timeout: 60_000 });
       assert.equal(await page.locator('#download').getAttribute('download'), 'Roboto-Regular.otf');
       await page.locator('#preview').waitFor({ state: 'visible' });

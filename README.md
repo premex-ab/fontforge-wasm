@@ -4,9 +4,12 @@
 
 **[Try the live demo →](https://warting.github.io/fontforge-wasm/)**
 
-Use the hosted Roboto TTF and OTF examples to convert with one click, or choose
+Select a hosted Roboto TTF or OTF example, or choose
 your own font. Demo fonts retain their Apache 2.0 license; see
-[their provenance and license](examples/fonts/README.md).
+[their provenance and license](examples/fonts/README.md). Press **Convert locally** to start.
+The timestamped activity log shows engine loading, worker initialization, native
+FontForge conversion time, and preview preparation. Total time starts at the
+Convert click; example loading is separate. Assets may already be cached.
 
 Convert static TrueType and OpenType/CFF fonts in a browser or Node.js worker.
 Fonts stay in the worker's memory. There is no upload, server fallback, telemetry,
