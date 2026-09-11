@@ -19,6 +19,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
+  if (request.cache === 'no-store') { event.respondWith(fetch(request)); return; }
   const url = new URL(request.url);
   const scope = new URL(self.registration.scope);
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;

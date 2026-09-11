@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 execFileSync('node', ['build/pages.mjs'], { stdio: 'inherit' });
 let upgraded = false;
+let engineRequests = 0;
 const oldHtml = '<!doctype html><p>Previous release</p><script>navigator.serviceWorker.register("./demo-service-worker.js")</script>';
 const oldScript = 'document.documentElement.dataset.oldScript = "true";';
 const oldWorker = `const cacheName='fontforge-wasm-demo-regression-old';
@@ -16,6 +17,7 @@ self.addEventListener('fetch',e=>e.respondWith(caches.open(cacheName).then(async
 const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm', '.html': 'text/html' };
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url, 'http://localhost').pathname;
+  if (pathname.endsWith('fontforge-core.wasm')) engineRequests++;
   res.setHeader('Cache-Control', 'no-cache');
   if (!upgraded) {
     res.setHeader('Content-Type', pathname.endsWith('.js') ? 'text/javascript' : 'text/html');
@@ -59,7 +61,31 @@ try {
       assert.equal(await page.locator('#download').isVisible(), false, 'Selecting an example must not convert');
       await page.locator('#convert').click();
       await page.locator('#download').waitFor({state:'visible',timeout:60000});
-      console.log(`${engine.name()}: existing stale cache upgraded; both hosted examples work`);
+      await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+      await page.evaluate(() => caches.open('unrelated-project-cache'));
+      await page.locator('#reset-cache').click();
+      await page.waitForURL(/cold=/);
+      await page.locator('#normal-mode').waitFor({ state: 'visible' });
+      assert.equal(await page.locator('#download').isVisible(), false);
+      const cacheNames = await page.evaluate(() => caches.keys());
+      assert.ok(cacheNames.includes('unrelated-project-cache'));
+      assert.ok(!cacheNames.some(name => name.startsWith('fontforge-wasm-demo-')));
+      assert.equal(await page.evaluate(() => navigator.serviceWorker.controller), null);
+      const beforeCold = engineRequests;
+      await page.locator('[data-sample="ttf"]').click();
+      await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+      assert.equal(engineRequests, beforeCold, 'No engine preload in uncached mode');
+      for (let run = 1; run <= 2; run++) {
+        await page.locator('#convert').click();
+        await page.waitForFunction(() => !document.querySelector('#convert').disabled);
+        assert.equal(engineRequests, beforeCold + run, 'Every uncached conversion fetches WASM from the server');
+        assert.match(await page.locator('#activity-log').innerText(), /Fetching engine assets with browser cache bypassed/);
+        assert.equal(await page.locator('#download').isVisible(), true);
+      }
+      await page.locator('#normal-mode').click();
+      await page.waitForFunction(() => document.documentElement.dataset.offlineReady === 'true');
+      assert.ok(!new URL(page.url()).searchParams.has('cold'));
+      console.log(`${engine.name()}: stale cache upgrade, manual examples, uncached engine fetches and normal caching restored`);
     } finally {await context.close();await rm(profile,{recursive:true,force:true});}
   }
 } finally {server.close();}

@@ -10,6 +10,11 @@ your own font. Demo fonts retain their Apache 2.0 license; see
 The timestamped activity log shows engine loading, worker initialization, native
 FontForge conversion time, and preview preparation. Total time starts at the
 Convert click; example loading is separate. Assets may already be cached.
+Use **Clear demo cache & reload** to remove the demo offline cache and test
+with engine/example requests bypassing browser caches and offline preloading
+paused. Each conversion in this mode fetches the engine again. CDN, connection
+and WASM compilation caches are outside the demo’s control. Return to normal
+caching using the link beside the button.
 
 Convert static TrueType and OpenType/CFF fonts in a browser or Node.js worker.
 Fonts stay in the worker's memory. There is no upload, server fallback, telemetry,

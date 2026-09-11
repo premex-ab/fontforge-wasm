@@ -22,7 +22,7 @@ for (const path of ['src', 'dist', 'examples', 'licenses', 'LICENSE', 'NOTICE.md
 }
 // Keep the module graph and fonts in one immutable, versioned directory.
 const script = (await readFile('examples/browser/demo.js', 'utf8'))
-  .replace("new URL('../../demo-service-worker.js', import.meta.url)", "new URL('../../../../demo-service-worker.js', import.meta.url)");
+  .replaceAll("new URL('../../demo-service-worker.js', import.meta.url)", "new URL('../../../../demo-service-worker.js', import.meta.url)");
 await writeFile(`${destination}/${release}/examples/browser/demo.js`, script);
 const html = await readFile('examples/browser/index.html', 'utf8');
 await writeFile(`${destination}/index.html`, html.replace('src="./demo.js"', `src="./${release}/examples/browser/demo.js"`));

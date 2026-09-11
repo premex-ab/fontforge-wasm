@@ -7,6 +7,8 @@ export interface ConversionProgress {
 }
 export interface ConvertOptions {
   format: FontFormat;
+  /** Browser engine asset policy; no-store also bypasses the in-memory asset cache. */
+  cache?: 'default' | 'no-store';
   /** Lifecycle events. Exceptions thrown by this observer are ignored. */
   onProgress?: (event: ConversionProgress) => void;
   /** Terminates the worker and discards its in-memory files. */
