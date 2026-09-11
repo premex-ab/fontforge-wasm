@@ -2,6 +2,8 @@
 
 **Real FontForge outline conversion, running locally in WebAssembly.**
 
+**[Try the live demo →](https://warting.github.io/fontforge-wasm/)**
+
 Convert static TrueType and OpenType/CFF fonts in a browser or Node.js worker.
 Fonts stay in the worker's memory. There is no upload, server fallback, telemetry,
 Python runtime or FontForge GUI.
@@ -143,3 +145,7 @@ python3 -m http.server 8090
 **GPL-3.0-or-later**, matching FontForge as a whole. See [NOTICE.md](NOTICE.md) for
 upstream notices and corresponding source. Packaging this engine separately does
 not remove the license obligations of applications distributing a combined work.
+
+The live demo is hosted on GitHub Pages. Successful builds of `main` deploy it
+automatically after the native and browser tests pass. Run `node build/pages.mjs`
+after building to assemble the same static site locally.

@@ -8,3 +8,5 @@ test/results/
 .venv/
 
 __pycache__/
+
+_site/
