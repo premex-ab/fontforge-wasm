@@ -1,6 +1,10 @@
 # fontforge-wasm
 
-**Real FontForge outline conversion, running locally in WebAssembly.**
+**FontForge for WebAssembly — a portable engine for browsers and Node.js.**
+
+This alpha exposes conversion first. The product direction is a broader FontForge
+port, including native scripting and a future web editor; it is not yet a full
+CLI or Python port. See the [development plan](ROADMAP.md).
 
 **[Try the live demo →](https://warting.github.io/fontforge-wasm/)**
 
@@ -30,7 +34,7 @@ Download the npm-compatible `.tgz` from [Releases](https://github.com/warting/fo
 and install it:
 
 ```sh
-npm install ./warting-fontforge-wasm-0.2.0-alpha.1.tgz
+npm install ./warting-fontforge-wasm-0.3.0-alpha.1.tgz
 ```
 
 The alpha is distributed through GitHub Releases; an npm registry publication is
@@ -89,6 +93,9 @@ const result = await convert(bytes, {
 | TTC | Yes | Yes | `faceIndex` selects the imported face; export contains one face |
 | UFO | Yes | Yes | ZIP containing one UFO source directory; export is `.ufo.zip` |
 | FON | Yes | Yes | Export: 16 px Windows ANSI bitmap. Import: rectangular pixel contours, no smoothing |
+| SFD | Yes | Yes | Editable FontForge source for single static fonts |
+| BDF, FNT, OTB, Palm PDB | Yes | Yes | Monochrome bitmaps; outline export rasterizes at 16 px |
+| PCF | Yes | No | X11 bitmap input; independent fixtures made with bdftopcf |
 | AFM, PFM, TFM | No | Yes | Metrics only, with no outlines; PFM/TFM use Windows ANSI encoding |
 
 The exported `FORMATS` registry describes capabilities, file extensions and notes.
@@ -177,11 +184,9 @@ python3 -m http.server 8090
 
 ## Roadmap
 
-- Broader real-world font corpus and fuzz testing.
-- Compressed EOT, variable/color fonts and richer collection handling.
-- Smaller download and lower startup cost.
-- Bundler recipes, reusable worker pool and batch conversion.
-- Additional formats only when their conversion paths are tested.
+See [ROADMAP.md](ROADMAP.md) for the product direction, milestones, format gaps
+and acceptance criteria: OFC adoption, native FontForge scripting/CLI semantics,
+format and feature parity, stateful editing API, then a web-native editor.
 
 ## License
 

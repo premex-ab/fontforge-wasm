@@ -19,14 +19,14 @@ for (const definition of examples) {
   button.setAttribute('aria-pressed', 'false'); button.textContent = `Use ${definition.id.toUpperCase()} example`;
   exampleButtons.append(button);
 }
-format.replaceChildren(...FORMATS.map(f => new Option(`${f.id.toUpperCase()} · ${f.label}`, f.id)));
+format.replaceChildren(...FORMATS.filter(f => f.output).map(f => new Option(`${f.id.toUpperCase()} · ${f.label}`, f.id)));
 format.value = 'otf';
 const samples = [...document.querySelectorAll('[data-sample]')];
 function inputHint(file) { return file.name.toLowerCase().endsWith('.zip') ? 'ufo' : file.name.split('.').pop().toLowerCase(); }
 function showFormatNote() { formatNote.textContent = FORMATS.find(f => f.id === format.value)?.note || 'Outline conversion can change hinting and layout tables.'; }
 for (const definition of FORMATS) {
   const row = document.createElement('tr');
-  for (const text of [definition.id.toUpperCase(), definition.input ? 'Yes' : 'Export only', 'Yes', definition.note || 'Static outlines']) {
+  for (const text of [definition.id.toUpperCase(), definition.input ? 'Yes' : 'Export only', definition.output ? 'Yes' : 'Import only', definition.note || 'Static outlines']) {
     const cell = document.createElement('td'); cell.textContent = text; row.append(cell);
   }
   document.querySelector('#format-support').append(row);

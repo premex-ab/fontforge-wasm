@@ -1,7 +1,7 @@
 {
   "name": "@warting/fontforge-wasm",
-  "version": "0.2.0-alpha.1",
-  "description": "FontForge's outline conversion engine in WebAssembly, for browsers and Node.js",
+  "version": "0.3.0-alpha.1",
+  "description": "FontForge for WebAssembly: a portable font engine for browsers and Node.js",
   "type": "module",
   "license": "GPL-3.0-or-later",
   "author": "warting",

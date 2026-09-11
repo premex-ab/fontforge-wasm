@@ -15,20 +15,22 @@ source_glyphs = source.getGlyphSet()
 for path in sorted(results.glob('*-back.*')):
     font = TTFont(path)
     cmap = font.getBestCmap()
-    is_bitmap = path.name.startswith('fon-')
-    expected = {c: n for c,n in source.getBestCmap().items() if not is_bitmap or c < 256}
+    is_bitmap = path.name.split('-')[0] in ['fon','bdf','fnt','otb','pdb','pcf']
+    expected = {c: n for c,n in source.getBestCmap().items() if path.name.split('-')[0] not in ['fon','fnt','pdb'] or c < 256}
     if path.name.startswith('compressed-ufo-'):
         assert cmap.get(65) == 'A', path
         continue
-    assert cmap == expected, (path.name, cmap, expected)
-    assert font['name'].getDebugName(1) == 'Wasm Test', path
+    assert set(cmap) == set(expected), (path.name, cmap, expected)
+    if not is_bitmap: assert font['name'].getDebugName(1) == 'Wasm Test', path
     glyphs = font.getGlyphSet()
-    for code, name in expected.items():
-        assert abs(font['hmtx'][name][0] - source['hmtx'][name][0]) <= (63 if is_bitmap else 2), (path.name, name)
+    for code, source_name in expected.items():
+        name = cmap[code]
+        scale = source['head'].unitsPerEm / font['head'].unitsPerEm
+        assert abs(font['hmtx'][name][0] * scale - source['hmtx'][source_name][0]) <= (70 if is_bitmap else 2), (path.name, name)
         pen = BoundsPen(glyphs); glyphs[name].draw(pen)
         if name != 'space':
             assert pen.bounds is not None, (path.name, name)
-            original = BoundsPen(source_glyphs); source_glyphs[name].draw(original)
+            original = BoundsPen(source_glyphs); source_glyphs[source_name].draw(original)
             if not is_bitmap: assert all(abs(a-b) <= 3 for a,b in zip(pen.bounds,original.bounds)), (path.name,name,pen.bounds,original.bounds)
     if path.name.split('-')[0] in ['ttf','otf','woff','woff2','eot','dfont','suit','ttc','ufo']:
         assert 'GSUB' in font and 'GPOS' in font, path

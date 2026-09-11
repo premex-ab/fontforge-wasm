@@ -23,5 +23,11 @@ export const FORMATS = Object.freeze([
   { id:'tfm', native:18, label:'TeX Font Metrics', input:false, note:'Metrics export only; Windows ANSI encoding.' },
   { id:'fon', native:19, label:'Windows bitmap font', note:'Export rasterizes Windows ANSI characters at 16 px. Import preserves pixels as rectangular outlines, not smooth curves.' },
   { id:'t11', native:20, label:'PostScript Type 11', note:'CID-keyed TrueType; exported CID mapping covers BMP Unicode (U+0000–FFFF).' },
-].map(format => Object.freeze({ input:true, ...format })));
+  { id:'sfd', native:21, label:'FontForge source', note:'Editable FontForge source; conversion API currently supports single static fonts.' },
+  { id:'bdf', native:22, label:'Glyph Bitmap Distribution', note:'Monochrome bitmap font; outline export rasterizes at 16 px. Bitmap import preserves pixels as rectangular outlines.' },
+  { id:'fnt', native:23, label:'Windows bitmap resource', note:'Single Windows ANSI bitmap font at 16 px; not BMFont game atlases.' },
+  { id:'otb', native:24, label:'OpenType bitmap', note:'Bitmap-only SFNT at 16 px; bitmap import preserves pixels as rectangular outlines.' },
+  { id:'pdb', native:25, label:'Palm bitmap font', note:'Palm font database, not arbitrary .pdb data; 16 px Windows ANSI bitmap export.' },
+  { id:'pcf', native:0, output:false, label:'Portable Compiled Format', note:'X11 bitmap input only, with 16-bit character codes; bitmap pixels become rectangular outlines for outline exports.' },
+].map(format => Object.freeze({ input:true, output:true, ...format })));
 export const getFormat = id => FORMATS.find(format => format.id === id);

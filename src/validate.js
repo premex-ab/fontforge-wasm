@@ -35,6 +35,7 @@ export function validateSfnt(bytes) {
   for (const required of ['head', 'hhea', 'hmtx', 'maxp', 'cmap', 'name']) {
     if (!tables.has(required)) invalid();
   }
+  if (signature === 0x00010000 && tables.has('EBDT') && tables.has('EBLC') && (!tables.has('glyf') || [...Array(count).keys()].some(i => view.getUint32(12+i*16) === 0x676c7966 && view.getUint32(24+i*16) === 0))) return 'otb';
   if (signature === 0x00010000 && (!tables.has('glyf') || !tables.has('loca'))) invalid();
   if (signature === 0x4f54544f && !tables.has('CFF ')) invalid();
   return signature === 0x00010000 ? 'ttf' : 'otf';
@@ -74,6 +75,15 @@ export function validateFont(bytes, hint) {
     }
     return woff2 ? 'woff2' : 'woff';
   }
+  if (signature === 0x01666370) {
+    const count = v.getUint32(4,true);
+    if (!count || count > 32 || 8 + 16 * count > bytes.length) invalid();
+    for (let i=0;i<count;i++) { const type=v.getUint32(8+16*i,true), flags=v.getUint32(12+16*i,true);
+      // bdftopcf reserves 100 bytes in accelerator directory records, but
+      // writes only 48 (or 72 with ink bounds), including at EOF.
+      const size=[2,256].includes(type) ? (flags & 0x100 ? 72 : 48) : v.getUint32(16+16*i,true), offset=v.getUint32(20+16*i,true); if (offset > bytes.length || size > bytes.length-offset) invalid(); }
+    return 'pcf';
+  }
   if (signature === 0x74746366) {
     if (![0x10000, 0x20000].includes(v.getUint32(4))) invalid();
     const count = v.getUint32(8);
@@ -101,6 +111,10 @@ export function validateFont(bytes, hint) {
     invalid();
   }
   const text = new TextDecoder().decode(bytes.subarray(0, Math.min(bytes.length, 16384)));
+  if (/^SplineFontDB:\s*\d/.test(text)) return 'sfd';
+  if (/^STARTFONT\s+2\./.test(text)) return 'bdf';
+  if (bytes.length >= 118 && [0x200,0x300].includes(v.getUint16(0,true)) && v.getUint32(2,true) === bytes.length && !(v.getUint16(66,true)&1)) return 'fnt';
+  if (bytes.length >= 78 && ['Font','NFNT'].includes(new TextDecoder().decode(bytes.subarray(60,64)))) return 'pdb';
   if (text.startsWith('%!')) {
     if (/\/FontType\s+11\b|Resource-CIDFont/.test(text)) return 't11';
     if (/PS-TrueTypeFont|\/FontType\s+42\b/.test(text)) return 't42';

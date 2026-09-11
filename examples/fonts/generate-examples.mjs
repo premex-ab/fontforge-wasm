@@ -7,6 +7,7 @@ const input = await readFile(new URL('Roboto-Regular.ttf',root));
 const checksums={};
 for (const format of FORMATS) {
   const name=`Roboto-Regular.${format.extension || format.id}`;
+  if (!format.output) { checksums[name]=createHash('sha256').update(await readFile(new URL(name,root))).digest('hex'); continue; }
   const bytes=format.id==='ttf'?input:await convert(input,{format:format.id,timeoutMs:60000});
   if(format.id!=='ttf')await writeFile(new URL(name,root),bytes);
   checksums[name]=createHash('sha256').update(bytes).digest('hex');

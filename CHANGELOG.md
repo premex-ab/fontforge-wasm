@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0-alpha.1
+
+- Add SFD, BDF, FNT, OTB and Palm PDB import/export, and PCF import.
+- Separate import and export capabilities in the SDK registry and demo.
+- Set FontForge's headless runtime flag explicitly so embedded bitmap strikes
+  load without trying to display a desktop selection dialog.
+- Preserve contour order and bitmap sources when saving SFD.
+- Add a development plan toward a broader FontForge port, native scripting and
+  an independent engine API for a future web editor.
+- New bitmap formats are monochrome; outline-to-bitmap defaults to 16 px,
+  and bitmap-to-outline preserves pixels as rectangles rather than smoothing.
+
+
 ## 0.2.0-alpha.1
 
 - 22 export formats and 19 input formats, with an exported capability registry.

@@ -1,4 +1,6 @@
-export type FontFormat = 'ttf' | 'otf' | 'woff' | 'woff2' | 'eot' | 'svg' | 'pfa' | 'pfb' | 'cff' | 't42' | 'ps' | 'pt3' | 'dfont' | 'suit' | 'bin' | 'ufo' | 'ttc' | 'afm' | 'pfm' | 'tfm' | 'fon' | 't11';
+export type FontFormat = 'ttf' | 'otf' | 'woff' | 'woff2' | 'eot' | 'svg' | 'pfa' | 'pfb' | 'cff' | 't42' | 'ps' | 'pt3' | 'dfont' | 'suit' | 'bin' | 'ufo' | 'ttc' | 'afm' | 'pfm' | 'tfm' | 'fon' | 't11' | 'sfd' | 'bdf' | 'fnt' | 'otb' | 'pdb' | 'pcf';
+export type FontOutputFormat = Exclude<FontFormat, 'pcf'>;
+export type FontInputFormat = Exclude<FontFormat, 'afm' | 'pfm' | 'tfm'>;
 export interface ConversionProgress {
   stage: 'assets' | 'worker' | 'initialize' | 'input' | 'convert' | 'converted' | 'output' | 'decode' | 'package';
   message: string;
@@ -6,9 +8,9 @@ export interface ConversionProgress {
   durationMs?: number;
 }
 export interface ConvertOptions {
-  format: FontFormat;
+  format: FontOutputFormat;
   /** Optional hint for ambiguous legacy containers and PostScript aliases. */
-  inputFormat?: FontFormat;
+  inputFormat?: FontInputFormat;
   /** Zero-based face index for TTC input. Defaults to 0. */
   faceIndex?: number;
   /** Browser engine asset policy; no-store also bypasses the in-memory asset cache. */
@@ -27,4 +29,4 @@ export declare const MAX_INPUT_BYTES: number;
 /** Converts a single static outline font; does not detach or mutate input. */
 export declare function convert(input: Uint8Array, options: ConvertOptions): Promise<Uint8Array>;
 
-export declare const FORMATS: readonly Readonly<{ id: FontFormat; native: number; label: string; input: boolean; preview?: boolean; extension?: string; note?: string }>[];
+export declare const FORMATS: readonly Readonly<{ id: FontFormat; native: number; label: string; input: boolean; output: boolean; preview?: boolean; extension?: string; note?: string }>[];

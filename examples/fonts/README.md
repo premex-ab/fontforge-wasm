@@ -16,6 +16,9 @@ formats can lose metadata, shaping tables and character coverage. FON is a
 TTC contains one face.
 
 Run `node examples/fonts/generate-examples.mjs` after building the engine to
-regenerate every derivative. `checksums.json` records the checked-in files.
+regenerate the WASM derivatives and checksum manifest. PCF is generated separately
+with X11's `bdftopcf`: install `xfonts-utils`, then run `python3 test/make-pcf.py`
+and rerun the example generator for its checksum. PCF examples include only
+encoded BMP characters below U+FFFE, as PCF cannot represent non-BMP codes. `checksums.json` records the checked-in files.
 TTF/OTF are preloaded for the offline demo. Other public examples are cached on
 first use. User-selected fonts and outputs are never added to the offline cache.

@@ -17,7 +17,7 @@ function loadBrowserAssets(cache) {
 
 /** Convert in a disposable worker. The caller's input buffer is never detached. */
 export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress, cache = 'default', inputFormat, faceIndex = 0 } = {}) {
-  if (!getFormat(format)) throw new FontForgeError('UNSUPPORTED_FORMAT', 'Choose an output format from FORMATS.');
+  if (!getFormat(format)?.output) throw new FontForgeError('UNSUPPORTED_FORMAT', 'Choose an output format from FORMATS.');
   if (inputFormat && !getFormat(inputFormat)?.input) throw new FontForgeError('UNSUPPORTED_FONT', 'This input format is not supported; metrics files are export-only.');
   if (!Number.isInteger(faceIndex) || faceIndex < 0 || faceIndex > 255) throw new FontForgeError('INVALID_FACE_INDEX', 'faceIndex must be an integer from 0 to 255.');
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000) throw new RangeError('timeoutMs must be between 1 and 300000.');

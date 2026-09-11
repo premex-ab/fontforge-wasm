@@ -75,7 +75,7 @@ try {
       }
       await page.locator('[data-sample="woff2"]').click();
       await page.waitForFunction(() => !document.querySelector('#convert').disabled);
-      for (const definition of FORMATS) {
+      for (const definition of FORMATS.filter(f => f.output)) {
         await page.locator('#format').selectOption(definition.id);
         await page.locator('#convert').click();
         await page.waitForFunction(() => !document.querySelector('#convert').disabled, undefined, { timeout: 60000 });
@@ -116,7 +116,7 @@ try {
       await page.emulateMedia({ colorScheme: 'dark' });
       await page.screenshot({ path: `test/results/${engine.name()}-dark.png`, fullPage: true });
       assert.deepEqual(errors, []);
-      console.log(`${engine.name()}: 19 hosted input formats, 22 exports, FontFace previews, WOFF2 with asset server stopped, no uploads, no cross-origin isolation`);
+      console.log(`${engine.name()}: ${FORMATS.filter(f => f.input).length} hosted input formats, ${FORMATS.filter(f => f.output).length} exports, FontFace previews, WOFF2 with asset server stopped, no uploads, no cross-origin isolation`);
     } finally { await browser.close(); await rm(profile, { recursive: true, force: true }); }
   }
 } finally { server.close(); }

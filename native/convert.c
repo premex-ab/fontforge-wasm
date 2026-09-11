@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <fontforge-config.h>
 #include "splinefont.h"
+#include "fontforge.h"
 #include "encoding.h"
 #include "splineorder2.h"
 #include "splineutil.h"
@@ -13,6 +14,9 @@
 #include "splinesaveafm.h"
 #include "splinefill.h"
 #include "winfonts.h"
+#include "sfd.h"
+#include "dumpbdf.h"
+#include "palmfonts.h"
 
 // Preserve a bitmap font's pixel appearance as rectangular outline runs.
 // This is deliberately not smoothing/autotracing; the demo labels the loss.
@@ -49,18 +53,24 @@ static int bitmap_to_outlines(SplineFont *font) {
 
 // Numeric format IDs are our ABI, not FontForge's internal enum values.
 int ff_convert(const char *input, const char *output, int format) {
-    if (format < 1 || format > 20) return 1;
+    if (format < 1 || format > 25) return 1;
     doinitFontForgeMain();
+    no_windowing_ui = true;
     SplineFont *font = ReadSplineFont(input, 0);
     if (!font) return 2;
     if (font->subfontcnt || font->mm) { SplineFontFree(font); return 3; }
     // Bitmap inputs need explicit tracing; do not silently emit empty outlines.
-    if (font->onlybitmaps && format != 19 && !bitmap_to_outlines(font)) { SplineFontFree(font); return 6; }
+    if (font->onlybitmaps && format != 21 && !(format >= 22 && format <= 25) && format != 19 && !bitmap_to_outlines(font)) { SplineFontFree(font); return 6; }
     // An explicitly present blank glyph still carries an advance width.
-    for (int i=0;i<font->glyphcnt;i++) if(font->glyphs[i]) font->glyphs[i]->widthset=true;
+    for (int i=0;i<font->glyphcnt;i++) if(font->glyphs[i]) {
+        font->glyphs[i]->widthset=true;
+        // A .notdef fallback glyph is not an encoded character. Bitmap readers
+        // may assign it a spare slot; do not publish that slot as real Unicode.
+        if (!strcmp(font->glyphs[i]->name,".notdef")) font->glyphs[i]->unicodeenc=-1;
+    }
     int quadratic = format==1 || format==3 || format==4 || format==9 || format==12 || format==13 || format==20;
-    if (quadratic) SFConvertToOrder2(font); else SFConvertToOrder3(font);
-    EncMap *map = EncMapFromEncoding(font, FindOrMakeEncoding((format==17 || format==18 || format==19)?"win":"UnicodeFull"));
+    if (format != 21) { if (quadratic) SFConvertToOrder2(font); else SFConvertToOrder3(font); }
+    EncMap *map = EncMapFromEncoding(font, FindOrMakeEncoding((format==17 || format==18 || format==19 || format==23 || format==25)?"win":"UnicodeFull"));
     if (!map) { SplineFontFree(font); return 4; }
     int result=0;
     switch (format) {
@@ -82,10 +92,16 @@ int ff_convert(const char *input, const char *output, int format) {
         }
         break;
     }
-    case 19: {
+    case 21: result=SFDWrite((char *)output,font,map,NULL,0); break;
+    case 19: case 22: case 23: case 24: case 25: {
         if (!font->bitmaps) font->bitmaps=SplineFontRasterize(font,ly_fore,16,false);
         int32_t sizes[]={16,0};
-        if (font->bitmaps) { sizes[0]=font->bitmaps->pixelsize | (BDFDepth(font->bitmaps)<<16); result=FONFontDump((char *)output,font,sizes,96,map); }
+        if (font->bitmaps) { sizes[0]=font->bitmaps->pixelsize | (BDFDepth(font->bitmaps)<<16);
+            if (format==19) result=FONFontDump((char *)output,font,sizes,96,map);
+            else if (format==22) result=BDFFontDump((char *)output,font->bitmaps,map,96);
+            else if (format==23) result=FNTFontDump((char *)output,font->bitmaps,map,96);
+            else if (format==24) result=WriteTTFFont((char *)output,font,ff_none,sizes,bf_otb,0,map,ly_fore);
+            else result=WritePalmBitmaps(output,font,sizes,map); }
         break;
     }
     }
