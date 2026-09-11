@@ -1,0 +1,43 @@
+name: Build and verify WASM
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  wasm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: build/Dockerfile
+          outputs: type=local,dest=artifacts
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - run: npm ci
+      - run: node build/assemble.mjs
+      - run: |
+          python3 -m venv .venv
+          .venv/bin/pip install fonttools==4.59.0
+          .venv/bin/python test/make-fixtures.py
+          npm test
+          .venv/bin/python test/verify-output.py
+      - run: |
+          npm ci
+          npx playwright install --with-deps chromium webkit
+          npm run test:browser
+      - run: node build/release.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fontforge-wasm-alpha
+          path: artifacts/release/
+          if-no-files-found: error

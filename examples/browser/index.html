@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>fontforge-wasm · Local font conversion</title>
+<style>
+:root { color-scheme: light dark; font: 16px/1.55 system-ui, sans-serif; --paper: #faf8f3; --ink: #252822; --muted: #656960; --line: #d6dbcf; --accent: #345e36; }
+@media(prefers-color-scheme:dark) { :root { --paper:#171b17; --ink:#f0f0e7; --muted:#b8c1b2; --line:#424b3e; --accent:#b4d6a1; } }
+* { box-sizing:border-box; } body { max-width:850px; margin:auto; padding:48px 24px; background:var(--paper); color:var(--ink); }
+a { color:var(--accent); } header { display:flex; justify-content:space-between; align-items:center; gap:20px; }
+.wordmark { font-weight:750; letter-spacing:-.04em; } .tag { font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+h1 { font:clamp(3rem,8vw,5.5rem)/1.05 Georgia,serif; letter-spacing:-.045em; margin:68px 0 24px; max-width:700px; }
+p { max-width:620px; } .intro { font-size:1.1rem; color:var(--muted); }
+.panel { border:1px solid var(--line); padding:28px; margin-top:36px; border-radius:16px; }
+.controls { display:flex; flex-wrap:wrap; align-items:center; gap:16px; } label { font-weight:600; }
+input,select,button,.download { font:inherit; } input[type=file] { max-width:100%; margin:12px 0 24px; }
+select,button,.download { padding:10px 16px; border:1px solid var(--line); border-radius:8px; background:var(--paper); color:var(--ink); }
+button { cursor:pointer; } button[type=submit],.download { background:var(--accent); color:var(--paper); border-color:var(--accent); }
+button:disabled { opacity:.5; cursor:wait; } .download { display:inline-block; text-decoration:none; margin-top:12px; }
+[hidden] { display:none !important; } #status { min-height:1.6em; color:var(--muted); } #preview { font-size:clamp(2rem,5vw,3rem); overflow-wrap:anywhere; }
+footer { border-top:1px solid var(--line); margin-top:44px; padding-top:24px; font-size:.85rem; color:var(--muted); }
+</style>
+<header><span class="wordmark">fontforge-wasm</span><span class="tag">Experimental alpha · GPL-3.0+</span></header>
+<main>
+<h1>Different outlines.<br>Same letters.</h1>
+<p class="intro">Real FontForge, in your browser. Convert a static TrueType or OpenType font locally, with no upload.</p>
+<form class="panel" id="converter">
+<label for="font">Choose a TTF or OTF font</label><br>
+<input id="font" type="file" accept=".ttf,.otf" required>
+<div class="controls"><label for="format">Convert to</label><select id="format"><option value="otf">OTF · cubic outlines</option><option value="ttf">TTF · quadratic outlines</option></select><button id="convert" type="submit">Convert locally</button><button id="cancel" type="button" hidden>Cancel</button></div>
+<p id="status" role="status" aria-live="polite">The engine loads on your first conversion.</p>
+<a class="download" id="download" hidden>Download font</a>
+<div id="preview" hidden>The proof is in the letters.<br>Aa Bb Cc 0123456789</div>
+</form>
+<p class="tag">Static fonts only · 16 MiB maximum input</p>
+<p>Outline conversion can alter hinting and font tables. Check the result before using it in a project. WOFF2, variable fonts, collections and color fonts are not supported in this alpha.</p>
+</main>
+<footer><a href="https://github.com/warting/fontforge-wasm">Source & documentation</a> · Independent project, not affiliated with FontForge. Conversion runs in memory. No fonts are uploaded. The demo caches its engine for offline use.</footer>
+<script type="module" src="./demo.js"></script>
+</html>

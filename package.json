@@ -1,0 +1,54 @@
+{
+  "name": "@warting/fontforge-wasm",
+  "version": "0.1.0-alpha.1",
+  "description": "FontForge's outline conversion engine in WebAssembly, for browsers and Node.js",
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "author": "warting",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/warting/fontforge-wasm.git"
+  },
+  "bugs": "https://github.com/warting/fontforge-wasm/issues",
+  "homepage": "https://github.com/warting/fontforge-wasm#readme",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    },
+    "./dist/*": "./dist/*"
+  },
+  "files": [
+    "src",
+    "dist",
+    "licenses",
+    "LICENSE",
+    "NOTICE.md",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "fontforge",
+    "wasm",
+    "webassembly",
+    "font",
+    "ttf",
+    "otf",
+    "offline"
+  ],
+  "scripts": {
+    "build": "docker build -f build/Dockerfile --output type=local,dest=artifacts . && node build/assemble.mjs",
+    "test": "node --test test/*.test.mjs",
+    "test:browser": "node test/browser.mjs",
+    "prepack": "node build/check-package.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "playwright": "1.63.0"
+  }
+}
