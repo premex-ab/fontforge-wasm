@@ -81,5 +81,19 @@ RUN mkdir -p /output/dist /output/sources \
 COPY build/licenses.py /product/build/licenses.py
 RUN python3 /product/build/licenses.py \
     && tar czf /output/sources/emscripten-runtime.tar.gz -C /emsdk/upstream/emscripten system src LICENSE
+# Opt-in proof build: the normal conversion artifact remains unchanged.
+FROM builder AS scripting-builder
+# FreeType also uses setjmp; it must agree with the interpreter's exception ABI.
+RUN emcmake cmake -S /work/freetype -B /work/freetype/out \
+    -DCMAKE_C_FLAGS="-O2 -I/opt/wasm/include -fwasm-exceptions -sSUPPORT_LONGJMP=wasm" \
+    && cmake --build /work/freetype/out --target install -j4
+RUN emcmake cmake -S /work/fontforge -B /work/fontforge/out \
+    -DENABLE_NATIVE_SCRIPTING=ON -DCMAKE_C_FLAGS="-O2 -I/opt/wasm/include -fwasm-exceptions -sSUPPORT_LONGJMP=wasm" \
+    && cmake --build /work/fontforge/out --target fontforge-script -j4
+RUN mkdir -p /script-output \
+    && cp /work/fontforge/out/wasm-wrapper/fontforge-script.* /script-output/
+FROM scratch AS scripting-export
+COPY --from=scripting-builder /script-output/ /
+
 FROM scratch AS export
 COPY --from=builder /output/ /

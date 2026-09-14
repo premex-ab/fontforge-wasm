@@ -1,0 +1,17 @@
+# Native reference uses the same hash-verified FontForge source as the WASM build.
+FROM emscripten/emsdk:5.0.7@sha256:4e332f7343b6f66320bf72f7ecc01a3d9f3866721a13b0e5c7b96505d6ab148a
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ninja-build gettext libglib2.0-dev libfreetype-dev libxml2-dev libltdl-dev \
+    libwoff-dev libbrotli-dev && rm -rf /var/lib/apt/lists/*
+COPY build/fetch.py build/sources.json /product/build/
+RUN mkdir -p /work /sources && python3 /product/build/fetch.py fontforge
+RUN cmake -S /work/fontforge -B /work/fontforge/out -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF \
+    -DENABLE_GUI=OFF -DENABLE_NATIVE_SCRIPTING=ON \
+    -DENABLE_PYTHON_SCRIPTING=OFF -DENABLE_PYTHON_EXTENSION=OFF \
+    -DENABLE_LIBSPIRO=OFF -DENABLE_LIBGIF=OFF -DENABLE_LIBJPEG=OFF \
+    -DENABLE_LIBPNG=OFF -DENABLE_LIBREADLINE=OFF -DENABLE_LIBTIFF=OFF \
+    -DENABLE_WOFF2=ON -DENABLE_HARFBUZZ=OFF -DENABLE_DOCS=OFF \
+    && cmake --build /work/fontforge/out --target fontforgeexe -j4
+RUN cp /work/fontforge/out/bin/fontforge /usr/local/bin/fontforge-reference
+ENTRYPOINT ["/usr/local/bin/fontforge-reference"]

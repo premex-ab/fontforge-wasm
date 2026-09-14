@@ -47,6 +47,11 @@ and only missing server-supported outputs use fallback.
 
 ## Milestone 2 — FontForge native scripting and CLI semantics
 
+The first [native scripting proof](docs/native-scripting-proof.md) is implemented
+as an opt-in development target: real upstream scripts, disposable workers,
+exit/log capture, native parity and browser tests. It is not yet a public SDK API
+or a released scripting feature; the work below remains the milestone scope.
+
 Enable FontForge's own scripting interpreter in a separate build target. Start
 with `fontforge -lang=ff -script` semantics and then `-c`; do not label a custom
 command parser as CLI compatibility. Python support is a later milestone.

@@ -197,3 +197,9 @@ not remove the license obligations of applications distributing a combined work.
 The live demo is hosted on GitHub Pages. Successful builds of `main` deploy it
 automatically after the native and browser tests pass. Run `node build/pages.mjs`
 after building to assemble the same static site locally.
+
+### Native scripting development
+
+An opt-in [native scripting proof](docs/native-scripting-proof.md) runs the real
+FontForge interpreter in a separate WASM build. See the reproduction instructions
+and remaining API/sandbox work there. It is not part of the released converter.
