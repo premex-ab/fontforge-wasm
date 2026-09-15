@@ -38,6 +38,7 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium webkit
           npm run test:browser
+          node test/scripting/api-browser.mjs
           node test/pages-cache.mjs
       - run: node build/release.mjs
       - uses: actions/upload-artifact@v4
@@ -54,6 +55,16 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: _site
+  ci:
+    name: CI
+    if: always()
+    needs: wasm
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require successful build and tests
+        env:
+          BUILD_RESULT: ${{ needs.wasm.result }}
+        run: test "$BUILD_RESULT" = success
   pages:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: wasm
