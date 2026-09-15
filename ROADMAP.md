@@ -143,3 +143,7 @@ measure memory/download/startup costs, publish browser support and compatibility
 matrices, review third-party source distribution, and define semver guarantees
 for the SDK, worker protocol and native ABI. Keep non-stable APIs explicitly
 experimental until these gates pass.
+
+The unreleased [execute API](docs/scripting-api.md) now adds typed Node/browser
+execution, live diagnostics, cumulative filesystem budgets and explicit capability
+errors. Public playground and broader editing-operation parity remain next.

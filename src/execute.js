@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { FontForgeError, validateFont, MAX_INPUT_BYTES } from './validate.js';
-import { FORMATS, getFormat } from './formats.js';
-export { FontForgeError, MAX_INPUT_BYTES, FORMATS };
+import { FontForgeError } from './validate.js';
+import { validateScript } from './script-validate.js';
 let browserAssets;
 function loadBrowserAssets(cache) {
   const load = () => Promise.all([
-    fetch(new URL('../dist/browser-worker.mjs', import.meta.url), { cache }),
-    fetch(new URL('../dist/fontforge-core.wasm', import.meta.url), { cache }),
+    fetch(new URL('../dist/script-browser-worker.mjs', import.meta.url), { cache }),
+    fetch(new URL('../dist/fontforge-script.wasm', import.meta.url), { cache }),
   ]).then(async ([script, wasm]) => {
     if (!script.ok || !wasm.ok) throw new Error('Could not load FontForge engine assets.');
     return { code: await script.text(), wasmBinary: await wasm.arrayBuffer() };
@@ -15,17 +14,13 @@ function loadBrowserAssets(cache) {
   return browserAssets ??= load();
 }
 
-/** Convert in a disposable worker. The caller's input buffer is never detached. */
-export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress, cache = 'default', inputFormat, faceIndex = 0 } = {}) {
-  if (!getFormat(format)?.output) throw new FontForgeError('UNSUPPORTED_FORMAT', 'Choose an output format from FORMATS.');
-  if (inputFormat && !getFormat(inputFormat)?.input) throw new FontForgeError('UNSUPPORTED_FONT', 'This input format is not supported; metrics files are export-only.');
-  if (!Number.isInteger(faceIndex) || faceIndex < 0 || faceIndex > 255) throw new FontForgeError('INVALID_FACE_INDEX', 'faceIndex must be an integer from 0 to 255.');
+/** Execute a native FontForge script in one disposable worker. */
+export async function execute(script, { args = [], files = {}, outputPaths = [], limits: suppliedLimits = {}, signal, timeoutMs = 30_000, onLog, onProgress, cache = 'default' } = {}) {
+  const request = validateScript({ script, args, files, outputPaths, limits: suppliedLimits });
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000) throw new RangeError('timeoutMs must be between 1 and 300000.');
-  if (signal?.aborted) throw new FontForgeError('ABORTED', 'Conversion was cancelled.');
   if (cache !== 'default' && cache !== 'no-store') throw new TypeError('cache must be default or no-store.');
-  validateFont(input, inputFormat);
-  // Buffer.slice() in Node shares storage; Uint8Array.from() always copies.
-  const bytes = Uint8Array.from(input);
+  if (signal && (typeof signal.addEventListener !== 'function' || typeof signal.removeEventListener !== 'function' || typeof signal.aborted !== 'boolean')) throw new FontForgeError('INVALID_REQUEST', 'signal must be an AbortSignal.');
+  if (signal?.aborted) throw new FontForgeError('ABORTED', 'Execution was cancelled.');
   const isNode = typeof process !== 'undefined' && !!process.versions?.node;
   return new Promise((resolve, reject) => {
     let worker, workerUrl, timer;
@@ -40,31 +35,34 @@ export async function convert(input, { format, signal, timeoutMs = 30_000, onPro
       if (error) reject(error);
       else resolve(result);
     };
-    const abort = () => finish(new FontForgeError('ABORTED', 'Conversion was cancelled.'));
+    const abort = () => finish(new FontForgeError('ABORTED', 'Execution was cancelled.'));
     const report = event => {
       if (finished) return;
-      try { onProgress?.(event); } catch { /* Observers cannot interrupt conversion. */ }
+      try { onProgress?.(event); } catch { /* Observers cannot interrupt script execution. */ }
     };
     const receive = data => {
+      if (finished) return;
+      if (data.log?.fatal) { finish(new FontForgeError(data.log.code, data.log.fatal)); return; }
+      if (data.log) { try { onLog?.(data.log); } catch {} return; }
       if (data.progress) { report(data.progress); return; }
       if (data.error) finish(new FontForgeError(data.error.code, data.error.message));
-      else finish(null, new Uint8Array(data.bytes));
+      else finish(null, data.result);
     };
-    const failed = error => finish(new FontForgeError('WORKER_ERROR', error.message || 'The conversion worker failed.'));
-    timer = setTimeout(() => finish(new FontForgeError('TIMEOUT', 'Conversion exceeded its time limit.')), timeoutMs);
+    const failed = error => finish(new FontForgeError('WORKER_ERROR', error.message || 'The script execution worker failed.'));
+    timer = setTimeout(() => finish(new FontForgeError('TIMEOUT', 'Execution exceeded its time limit.')), timeoutMs);
     signal?.addEventListener('abort', abort, { once: true });
     if (signal?.aborted) { abort(); return; }
     (async () => {
       let wasmBinary;
       if (isNode) {
-        report({ stage: 'worker', message: 'Starting conversion worker' });
+        report({ stage: 'worker', message: 'Starting script execution worker' });
         const { Worker } = await import('node:worker_threads');
         if (finished) return;
-        worker = new Worker(new URL('./node-worker.js', import.meta.url), { execArgv: [] });
+        worker = new Worker(new URL('./script-node-worker.js', import.meta.url), { execArgv: [] });
         worker.on('message', receive);
         worker.on('error', failed);
         worker.on('exit', code => {
-          if (!finished) failed(new Error(`Worker exited before returning a font (${code}).`));
+          if (!finished) failed(new Error(`Worker exited before returning a script result (${code}).`));
         });
       } else {
         report({ stage: 'assets', message: cache === 'no-store' ? 'Fetching engine assets with browser cache bypassed' : browserAssets ? 'Reusing engine assets in memory' : 'Loading engine assets (network or browser cache)' });
@@ -72,19 +70,16 @@ export async function convert(input, { format, signal, timeoutMs = 30_000, onPro
         if (finished) return;
         // Keep engine assets in memory so fresh workers need no network, even
         // where a browser does not cache module-worker dependency requests.
-        report({ stage: 'worker', message: 'Starting conversion worker' });
+        report({ stage: 'worker', message: 'Starting script execution worker' });
         if (finished) return;
         workerUrl = URL.createObjectURL(new Blob([assets.code], { type: 'text/javascript' }));
         worker = new Worker(workerUrl);
         wasmBinary = assets.wasmBinary;
         worker.onmessage = event => receive(event.data);
         worker.onerror = failed;
-        worker.onmessageerror = () => failed(new Error('Invalid message from conversion worker.'));
+        worker.onmessageerror = () => failed(new Error('Invalid message from script execution worker.'));
       }
-      worker.postMessage({ bytes, format, wasmBinary, inputFormat, faceIndex }, [bytes.buffer]);
+      worker.postMessage({ ...request, wasmBinary });
     })().catch(failed);
   });
 }
-
-export { execute } from './execute.js';
-export { SCRIPT_LIMITS } from './script-validate.js';

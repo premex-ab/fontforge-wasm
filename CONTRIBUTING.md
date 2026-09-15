@@ -25,7 +25,8 @@ conversion and browser font loading. No external application is needed.
 `build/sources.json` pins archives and their SHA-256 digests. `build/patch.py`
 contains small checked platform changes; `native/patch-formats.py` preserves
 Unicode information in Type 11 exports. The C adapter exposes only a narrow
-conversion ABI, not a general scripting interface. Keep browser filesystem access
+conversion ABI. A separate scripting target exposes the upstream interpreter;
+see docs/scripting-api.md and run both scripting test suites for changes to it. Keep browser filesystem access
 inside Emscripten's in-memory filesystem and run each job in its own worker.
 The WASM memory ceiling is a linear-memory limit, not a total process limit.
 

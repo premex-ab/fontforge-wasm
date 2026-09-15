@@ -25,6 +25,8 @@ jobs:
           cache-to: type=gha,mode=max
       - run: npm ci
       - run: node build/assemble.mjs
+      - run: npm run build:scripting
+      - run: node --test test/scripting/api.test.mjs test/scripting/quota.test.mjs
       - run: |
           python3 -m venv .venv
           .venv/bin/pip install fonttools==4.59.0 brotli==1.2.0

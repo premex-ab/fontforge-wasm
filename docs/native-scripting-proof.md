@@ -1,5 +1,9 @@
 # Native scripting proof
 
+Historical feasibility baseline. The follow-up [public API](scripting-api.md)
+adds typed execution and runtime filesystem budgets; the original harness below
+remains an internal parity test.
+
 This implements the first feasibility gate in [Epic #1](https://github.com/warting/fontforge-wasm/issues/1).
 It is an opt-in development build, not a released `execute()` API or a public
 script playground. The existing conversion distribution and OFC integration

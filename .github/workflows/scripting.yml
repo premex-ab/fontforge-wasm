@@ -6,6 +6,8 @@ on:
       - 'native/**'
       - 'build/**'
       - 'test/scripting/**'
+      - 'src/**'
+      - 'package*.json'
       - '.github/workflows/scripting.yml'
 permissions:
   contents: read
@@ -28,6 +30,8 @@ jobs:
           cache-from: type=gha,scope=scripting
           cache-to: type=gha,scope=scripting,mode=max
       - run: npm ci
+      - run: node build/assemble-scripting.mjs
+      - run: node --test test/scripting/api.test.mjs test/scripting/quota.test.mjs
       - run: node --test test/scripting/proof.test.mjs
       - run: docker build -f build/Dockerfile.scripting-native -t fontforge-wasm:scripting-native .
       - run: node test/scripting/parity.mjs
@@ -37,5 +41,8 @@ jobs:
           .venv/bin/python test/scripting/verify-parity.py
       - run: npx playwright install --with-deps chromium webkit
       - run: node test/scripting/browser.mjs
+        env:
+          BROWSER_CHANNEL: chromium
+      - run: node test/scripting/api-browser.mjs
         env:
           BROWSER_CHANNEL: chromium
