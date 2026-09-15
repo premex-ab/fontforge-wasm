@@ -5,3 +5,7 @@ for (const file of ['dist/browser-worker.mjs', 'dist/fontforge-core.mjs', 'dist/
 }
 const wasm = await readFile('dist/fontforge-core.wasm');
 if (wasm.subarray(0, 4).toString('hex') !== '0061736d') throw new Error('Invalid WASM artifact.');
+
+for (const name of ['fontforge-script.mjs', 'fontforge-script.wasm', 'script-browser-worker.mjs']) {
+  if (!(await stat(`dist/${name}`)).size) throw new Error('Run npm run build:scripting before packaging.');
+}

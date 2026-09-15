@@ -197,3 +197,11 @@ not remove the license obligations of applications distributing a combined work.
 The live demo is hosted on GitHub Pages. Successful builds of `main` deploy it
 automatically after the native and browser tests pass. Run `node build/pages.mjs`
 after building to assemble the same static site locally.
+
+### Native scripting (unreleased)
+
+The development branch exposes a typed `execute(script, options)` API for Node and
+browsers, with isolated workers, streamed logs, cancellation and runtime filesystem
+budgets. See the [API contract and example](docs/scripting-api.md). Build its
+separate assets with `npm run build:scripting`; `convert()` loads only the existing
+conversion engine. This API has not yet been published in a release.

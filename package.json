@@ -24,7 +24,8 @@
     "licenses",
     "LICENSE",
     "NOTICE.md",
-    "README.md"
+    "README.md",
+    "docs"
   ],
   "engines": {
     "node": ">=22"
@@ -42,7 +43,8 @@
     "build": "docker build -f build/Dockerfile --output type=local,dest=artifacts . && node build/assemble.mjs",
     "test": "node --test test/*.test.mjs",
     "test:browser": "node test/browser.mjs",
-    "prepack": "node build/check-package.mjs"
+    "prepack": "node build/check-package.mjs",
+    "build:scripting": "docker build -f build/Dockerfile --target scripting-export --output type=local,dest=artifacts/scripting . && node build/assemble-scripting.mjs"
   },
   "publishConfig": {
     "access": "public"

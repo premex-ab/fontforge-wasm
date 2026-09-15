@@ -1,0 +1,48 @@
+name: Native scripting proof
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'native/**'
+      - 'build/**'
+      - 'test/scripting/**'
+      - 'src/**'
+      - 'package*.json'
+      - '.github/workflows/scripting.yml'
+permissions:
+  contents: read
+jobs:
+  scripting:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: build/Dockerfile
+          target: scripting-export
+          outputs: type=local,dest=artifacts/scripting
+          cache-from: type=gha,scope=scripting
+          cache-to: type=gha,scope=scripting,mode=max
+      - run: npm ci
+      - run: node build/assemble-scripting.mjs
+      - run: node --test test/scripting/api.test.mjs test/scripting/quota.test.mjs
+      - run: node --test test/scripting/proof.test.mjs
+      - run: docker build -f build/Dockerfile.scripting-native -t fontforge-wasm:scripting-native .
+      - run: node test/scripting/parity.mjs
+      - run: |
+          python3 -m venv .venv
+          .venv/bin/pip install fonttools==4.59.0 brotli==1.2.0
+          .venv/bin/python test/scripting/verify-parity.py
+      - run: npx playwright install --with-deps chromium webkit
+      - run: node test/scripting/browser.mjs
+        env:
+          BROWSER_CHANNEL: chromium
+      - run: node test/scripting/api-browser.mjs
+        env:
+          BROWSER_CHANNEL: chromium

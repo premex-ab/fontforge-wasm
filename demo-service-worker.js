@@ -4,7 +4,9 @@ const VERSION = 'fontforge-wasm-demo-0.2.0-alpha.1-formats';
 const ASSETS = [
   'examples/browser/', 'examples/browser/demo.js',
   'examples/fonts/Roboto-Regular.ttf', 'examples/fonts/Roboto-Regular.otf', 'examples/fonts/LICENSE.txt',
-  'src/formats.js', 'src/containers.js', 'src/index.js', 'src/validate.js', 'src/browser-worker.js', 'src/runtime.js',
+  'src/formats.js', 'src/containers.js', 'src/index.js',
+  'src/execute.js',
+  'src/script-validate.js', 'src/validate.js', 'src/browser-worker.js', 'src/runtime.js',
   'dist/browser-worker.mjs', 'dist/fontforge-core.wasm',
 ].map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => {
