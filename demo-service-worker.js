@@ -26,8 +26,9 @@ self.addEventListener('fetch', event => {
   const scope = new URL(self.registration.scope);
   if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
   const navigation = request.mode === 'navigate';
+  const scriptAsset = /\/(?:examples\/playground\/(?:index\.html|playground\.js|presets\.js)?|dist\/(?:fontforge-script\.wasm|script-browser-worker\.mjs))$/.test(url.pathname);
   const publicExample = /\/examples\/fonts\/Roboto-Regular\.[a-z0-9.]+$/.test(url.pathname);
-  if (!navigation && !publicExample && !ASSETS.includes(request.url) && !url.pathname.startsWith(scope.pathname + 'releases/')) return;
+  if (!navigation && !publicExample && !scriptAsset && !ASSETS.includes(request.url) && !url.pathname.startsWith(scope.pathname + 'releases/')) return;
   event.respondWith((async () => {
     const cache = await caches.open(VERSION);
     if (navigation) {
@@ -44,7 +45,7 @@ self.addEventListener('fetch', event => {
       if (previous) return previous;
     }
     const response = await fetch(request);
-    if (publicExample && response.ok) await cache.put(request, response.clone());
+    if ((publicExample || scriptAsset) && response.ok) await cache.put(request, response.clone());
     return response;
   })());
 });

@@ -215,3 +215,5 @@ resetCache.onclick = async () => {
     location.replace(next.href);
   } catch (error) { update(`Could not reset demo cache: ${error.message}`); busy(false); }
 };
+
+document.querySelector('#playground-link').href = new URL('../playground/', import.meta.url);

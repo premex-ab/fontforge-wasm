@@ -36,3 +36,10 @@ const worker = (await readFile('demo-service-worker.js', 'utf8'))
     `].map(path => new URL(path === './' || path === 'examples/browser/' ? path : '${release}/' + path, self.registration.scope).href);`);
 await writeFile(`${destination}/demo-service-worker.js`, worker);
 console.log(`GitHub Pages demo assembled: ${version}`);
+
+const playground = (await readFile('examples/playground/playground.js', 'utf8'))
+  .replaceAll("new URL('../../demo-service-worker.js', import.meta.url)", "new URL('../../../../demo-service-worker.js', import.meta.url)");
+await writeFile(`${destination}/${release}/examples/playground/playground.js`, playground);
+await mkdir(`${destination}/playground`, { recursive: true });
+const playgroundHtml = await readFile('examples/playground/index.html', 'utf8');
+await writeFile(`${destination}/playground/index.html`, playgroundHtml.replace('src="./playground.js"', `src="../${release}/examples/playground/playground.js"`).replace('href="../browser/"', 'href="../"'));
