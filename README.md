@@ -205,3 +205,18 @@ browsers, with isolated workers, streamed logs, cancellation and runtime filesys
 budgets. See the [API contract and example](docs/scripting-api.md). Build its
 separate assets with `npm run build:scripting`; `convert()` loads only the existing
 conversion engine. This API has not yet been published in a release.
+
+### Script playground
+
+The [playground source](examples/playground/) provides an editable native script,
+Roboto or local input, metadata/export/rename presets, timestamped logs, stop/reset,
+and individual result downloads. Selecting an example never starts execution.
+`node build/pages.mjs` assembles it at `_site/playground/`; serve `_site` over HTTP.
+Run `node test/playground.mjs` for actual WASM and browser coverage.
+
+The scripting engine is downloaded on the first Run, then reused in memory.
+Public assets are cached after use for offline reload; selected fonts and generated
+files are never persisted. Chrome is tested with offline mode; the macOS WebKit
+runner uses failed HTTP connections because its offline emulation breaks navigation
+and Blob workers independently of the demo. No service-worker guarantee is made
+for every Safari version or private-browsing configuration.
