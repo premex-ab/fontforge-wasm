@@ -38,7 +38,7 @@ jobs:
           npm ci
           npx playwright install --with-deps chromium webkit
           npm run test:browser
-          node test/scripting/api-browser.mjs
+          BROWSER_CHANNEL=chromium node test/scripting/api-browser.mjs
           node test/pages-cache.mjs
       - run: node build/release.mjs
       - uses: actions/upload-artifact@v4
