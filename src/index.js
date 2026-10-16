@@ -98,3 +98,6 @@ export async function convert(input, { format, signal, timeoutMs = 30_000, onPro
     })().catch(failed);
   });
 }
+
+export { execute } from './execute.js';
+export { SCRIPT_LIMITS } from './script-validate.js';
