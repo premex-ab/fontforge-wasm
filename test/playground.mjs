@@ -74,7 +74,15 @@ try {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       await page.screenshot({path:`test/results/playground/${name}-mobile.png`,fullPage:true});
       // Cache a navigation controlled by the installed service worker, then reload offline.
-      await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+      await page.evaluate(async () => {
+        await navigator.serviceWorker.ready;
+        for (const suffix of ['/dist/script-browser-worker.mjs', '/dist/fontforge-script.wasm', '/src/variations.js']) {
+          const keys = await caches.keys(); let found = false;
+          for (const key of keys) for (const request of await (await caches.open(key)).keys())
+            if (new URL(request.url).pathname.endsWith(suffix)) found = true;
+          if (!found) throw new Error(`Offline asset missing: ${suffix}`);
+        }
+      });
       await page.reload(); await page.locator('#preset option').nth(2).waitFor({state:'attached'});
       // macOS WebKit's offline emulation breaks navigation and Blob workers.
       // Fail actual HTTP connections instead so the service-worker fallback is exercised.
@@ -82,7 +90,9 @@ try {
       else disconnected = true;
       await page.reload(); await page.locator('#preset option').nth(2).waitFor({state:'attached'});
       await page.locator('#sample').click(); await page.waitForFunction(() => document.querySelector('#selected').textContent.includes('Roboto-Regular.ttf'));
-      await page.locator('#run').click(); await page.waitForFunction(() => document.querySelector('#status').textContent==='Script completed.');
+      await page.locator('#run').click();
+      await page.waitForFunction(() => document.querySelector('#status').textContent==='Script completed.' || document.querySelector('#status').dataset.error==='true');
+      assert.equal(await page.locator('#status').innerText(), 'Script completed.', await page.locator('#log').innerText());
       assert.deepEqual(errors,[]);
       console.log(`${name}: presets, manual run, local/hosted input, downloads, errors, cancellation, reset, responsive layout and offline reload passed`);
     } finally { await context.close(); await rm(profile, {recursive:true,force:true}); }

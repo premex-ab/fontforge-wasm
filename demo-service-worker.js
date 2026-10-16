@@ -8,6 +8,7 @@ const ASSETS = [
   'src/execute.js',
   'src/script-validate.js', 'src/validate.js', 'src/browser-worker.js', 'src/runtime.js',
   'dist/browser-worker.mjs', 'dist/fontforge-core.wasm',
+  'dist/script-browser-worker.mjs', 'dist/fontforge-script.wasm',
 ].map(path => new URL(path, self.registration.scope).href);
 self.addEventListener('install', event => {
   // Revalidate mutable entry pages; never seed a new cache from stale HTTP data.
