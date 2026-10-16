@@ -99,9 +99,12 @@ const result = await convert(bytes, {
 | AFM, PFM, TFM | No | Yes | Metrics only, with no outlines; PFM/TFM use Windows ANSI encoding |
 
 The exported `FORMATS` registry describes capabilities, file extensions and notes.
-Variable fonts, CFF2, color fonts, multiple-master fonts and CID subfont collections
-remain unsupported. Unsupported SFNT tables are checked **after** WOFF/WOFF2
-decoding too. Type 11 imports without an embedded Unicode cmap may not recover
+TTF/OTF → WOFF2 and WOFF/WOFF2 → their original SFNT flavor preserve the original
+font tables, including variable axes, color tables and CID outlines. CID subfonts
+can also be flattened for static outline conversion. Other variable/CFF2 outline
+conversions require a static instance (`STATIC_INSTANCE_REQUIRED`); color outline
+conversion and multiple-master fonts remain unsupported. These checks also apply
+after WOFF/WOFF2 decoding. Type 11 imports without an embedded Unicode cmap may not recover
 character mappings: a CID number alone is not necessarily a Unicode code point.
 
 ```js
