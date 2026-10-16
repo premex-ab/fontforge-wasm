@@ -39,10 +39,12 @@ test('independent webfonts, CFF-flavoured webfonts and multi-face TTC',async()=>
   for(const faceIndex of [0,1])await writeFile(new URL(`face-${faceIndex}.ttf`,outputDir),await convert(collection,{format:'ttf',faceIndex}));
   await assert.rejects(convert(collection,{format:'ttf',faceIndex:2}),{code:'INVALID_FACE_INDEX'});
 });
-test('rejects compressed unsupported tables and oversized decoded fonts',async()=>{
+test('preserves compressed variable tables and rejects oversized decoded fonts',async()=>{
   for(const extension of ['woff','woff2']) {
     const invalid=await readFile(new URL(`variable.${extension}`,root));
-    await assert.rejects(convert(invalid,{format:'ttf'}),{code:'UNSUPPORTED_FONT'});
+    const decoded=await convert(invalid,{format:'ttf'});
+    assert.equal(validateFont(decoded,'ttf',{preserveTables:true}),'ttf');
+    await assert.rejects(convert(invalid,{format:'otf'}),{code:'STATIC_INSTANCE_REQUIRED'});
     const bytes=Buffer.from(await readFile(new URL(`ttf.${extension}`,root)));
     bytes.writeUInt32BE(17*1024*1024,16);
     await assert.rejects(convert(bytes,{format:'ttf'}),{code:'INPUT_TOO_LARGE'});

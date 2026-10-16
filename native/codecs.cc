@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include <woff2/decode.h>
+#include <woff2/encode.h>
 #include <woff2/output.h>
 #include <zlib.h>
 #include <cstdio>
@@ -67,4 +68,19 @@ extern "C" int ff_inflate_raw(const char *input, const char *output, int expecte
     inflateEnd(&stream);if (!ok) return 1;
     f=fopen(output,"wb");if (!f) return 1;
     ok=fwrite(out.data(),1,expected,f)==size_t(expected);fclose(f);return ok?0:1;
+}
+
+// Container-only conversion preserves variable, color, layout and CID tables.
+extern "C" int ff_encode_woff2(const char *input, const char *output) {
+    FILE *f=fopen(input,"rb"); if (!f) return 1;
+    fseek(f,0,SEEK_END);long n=ftell(f);rewind(f);
+    if (n<12 || n>long(LIMIT)) { fclose(f); return 1; }
+    std::vector<uint8_t> in(n);
+    bool read=fread(in.data(),1,n,f)==size_t(n);fclose(f);if (!read) return 1;
+    size_t size=woff2::MaxWOFF2CompressedSize(in.data(),in.size());
+    if (!size || size>LIMIT*2) return 2;
+    std::vector<uint8_t> out(size);
+    if (!woff2::ConvertTTFToWOFF2(in.data(),in.size(),out.data(),&size)) return 3;
+    f=fopen(output,"wb");if (!f) return 4;
+    bool ok=fwrite(out.data(),1,size,f)==size;fclose(f);return ok?0:4;
 }

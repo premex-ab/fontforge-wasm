@@ -10,7 +10,7 @@ export class FontForgeError extends Error {
 export const MAX_INPUT_BYTES = 16 * 1024 * 1024;
 const unsupported = new Set(['fvar', 'CFF2', 'COLR', 'CBDT', 'sbix', 'SVG ']);
 
-export function validateSfnt(bytes) {
+export function validateSfnt(bytes, { preserveTables = false } = {}) {
   if (!(bytes instanceof Uint8Array)) throw new TypeError('Input must be a Uint8Array.');
   if (bytes.length > MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE', 'Maximum input size is 16 MiB.');
   const invalid = () => { throw new FontForgeError('INVALID_FONT', 'Invalid or truncated font.'); };
@@ -29,7 +29,7 @@ export function validateSfnt(bytes) {
     const offset = view.getUint32(position + 8);
     const length = view.getUint32(position + 12);
     if (tables.has(tag) || offset > bytes.length || length > bytes.length - offset) invalid();
-    if (unsupported.has(tag)) throw new FontForgeError('UNSUPPORTED_FONT', `Unsupported table in this alpha: ${tag}`);
+    if (!preserveTables && unsupported.has(tag)) throw new FontForgeError(tag === 'fvar' || tag === 'CFF2' ? 'STATIC_INSTANCE_REQUIRED' : 'UNSUPPORTED_FONT', tag === 'fvar' || tag === 'CFF2' ? 'This conversion needs a static font instance. Choose TTF or WOFF2 to preserve variable axes, or export a static instance first.' : `Unsupported table in this alpha: ${tag}`);
     tables.add(tag);
   }
   for (const required of ['head', 'hhea', 'hmtx', 'maxp', 'cmap', 'name']) {
@@ -37,19 +37,19 @@ export function validateSfnt(bytes) {
   }
   if (signature === 0x00010000 && tables.has('EBDT') && tables.has('EBLC') && (!tables.has('glyf') || [...Array(count).keys()].some(i => view.getUint32(12+i*16) === 0x676c7966 && view.getUint32(24+i*16) === 0))) return 'otb';
   if (signature === 0x00010000 && (!tables.has('glyf') || !tables.has('loca'))) invalid();
-  if (signature === 0x4f54544f && !tables.has('CFF ')) invalid();
+  if (signature === 0x4f54544f && !(tables.has('CFF ') || preserveTables && tables.has('CFF2'))) invalid();
   return signature === 0x00010000 ? 'ttf' : 'otf';
 }
 
 
-export function validateFont(bytes, hint) {
+export function validateFont(bytes, hint, { preserveTables = false } = {}) {
   if (!(bytes instanceof Uint8Array)) throw new TypeError('Input must be a Uint8Array.');
   if (bytes.length > MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE', 'Maximum input size is 16 MiB.');
   const invalid = () => { throw new FontForgeError('INVALID_FONT', 'Invalid or truncated font.'); };
   if (bytes.length < 12) invalid();
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const signature = v.getUint32(0);
-  if (signature === 0x00010000 || signature === 0x4f54544f) return validateSfnt(bytes);
+  if (signature === 0x00010000 || signature === 0x4f54544f) return validateSfnt(bytes, {preserveTables});
   if (signature === 0x774f4646 || signature === 0x774f4632) {
     const woff2 = signature === 0x774f4632;
     const header = woff2 ? 48 : 44;
@@ -68,7 +68,7 @@ export function validateFont(bytes, hint) {
         const at = 44 + i * 20, offset = v.getUint32(at + 4), packed = v.getUint32(at + 8), length = v.getUint32(at + 12);
         const tag = String.fromCharCode(...bytes.subarray(at, at + 4));
         if (tags.has(tag) || offset < 44 + count * 20 || offset % 4 || packed > length || offset > bytes.length || packed > bytes.length - offset) invalid();
-        if (unsupported.has(tag)) throw new FontForgeError('UNSUPPORTED_FONT', `Unsupported table: ${tag}`);
+        if (!preserveTables && unsupported.has(tag)) throw new FontForgeError('UNSUPPORTED_FONT', `Unsupported table: ${tag}`);
         tags.add(tag); total += Math.ceil(length / 4) * 4;
       }
       if (total !== size) invalid();

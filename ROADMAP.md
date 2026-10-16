@@ -147,3 +147,7 @@ experimental until these gates pass.
 The unreleased [execute API](docs/scripting-api.md) now adds typed Node/browser
 execution, live diagnostics, cumulative filesystem budgets and explicit capability
 errors. Public playground and broader editing-operation parity remain next.
+
+A separate script playground now exercises this API with inspect/export/rename
+presets, editable scripts, manual execution, bounded logs, cancellation and output
+file downloads. Broader native parity for actual outline editing remains next.

@@ -5,9 +5,9 @@ import { FontForgeError, validateFont, validateSfnt } from './validate.js';
 import { getFormat } from './formats.js';
 import { extractCollection, wrapCollection, unwrapEot, wrapEot, unpackUfo, packUfo } from './containers.js';
 
-export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIndex }, report = () => {}) {
+export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIndex, variations }, report = () => {}) {
   try {
-    let inputFormat = validateFont(bytes, hint);
+    let inputFormat = validateFont(bytes, hint, {preserveTables:true});
     const target = getFormat(format);
     report({ stage: 'initialize', message: 'Initializing WebAssembly' });
     const module = await createModule({
@@ -17,10 +17,10 @@ export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIn
     report({ stage: 'input', message: 'Writing font to worker memory' });
     if (inputFormat === 'ttc') {
       report({ stage:'decode', message:`Extracting collection face ${faceIndex}` });
-      bytes = extractCollection(bytes, faceIndex); inputFormat = validateSfnt(bytes);
+      bytes = extractCollection(bytes, faceIndex); inputFormat = validateSfnt(bytes, {preserveTables:true});
     } else if (inputFormat === 'eot') {
       report({ stage:'decode', message:'Unwrapping EOT font' });
-      bytes = unwrapEot(bytes); inputFormat = validateSfnt(bytes);
+      bytes = unwrapEot(bytes); inputFormat = validateSfnt(bytes, {preserveTables:true});
     }
     let inputPath = `/input.${inputFormat === 'suit' ? 'bin' : inputFormat}`;
     if (inputFormat === 'ufo') {
@@ -31,9 +31,32 @@ export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIn
       if (inputFormat === 'woff' || inputFormat === 'woff2') {
         report({ stage:'decode', message:`Decoding ${inputFormat.toUpperCase()} and validating embedded outlines` });
         if (module.ccall('ff_decode_webfont','number',['string','string'],[inputPath,'/decoded.sfnt'])) throw new FontForgeError('INVALID_FONT','Could not decode webfont.');
-        bytes = module.FS.readFile('/decoded.sfnt'); inputFormat = validateSfnt(bytes);
+        bytes = module.FS.readFile('/decoded.sfnt'); inputFormat = validateSfnt(bytes, {preserveTables:true});
         inputPath = `/decoded.${inputFormat}`; module.FS.writeFile(inputPath,bytes);
       }
+    }
+    if (variations !== undefined) {
+      if (!['ttf','otf'].includes(inputFormat)) throw new FontForgeError('INVALID_VARIATION','Static instancing requires an OpenType variable font.');
+      report({stage:'instance',message:'Creating a static font at the selected axis values'});
+      const coordinates=Object.entries(variations).map(([tag,value])=>`${tag}=${value}`).join(',');
+      if (module.ccall('ff_instance','number',['string','string','string'],[inputPath,'/instance.sfnt',coordinates]))
+        throw new FontForgeError('INVALID_VARIATION','Could not create a static instance. Check that every axis and value is supported by this font.');
+      bytes=module.FS.readFile('/instance.sfnt');inputFormat=validateSfnt(bytes);
+      inputPath=`/instance.${inputFormat}`;module.FS.writeFile(inputPath,bytes);
+    }
+    // Repackage rather than redraw: retain variation/color/CID tables and glyph IDs.
+    if (['ttf','otf'].includes(inputFormat)) {
+      if (format === inputFormat) return {bytes};
+      if (format === 'woff2') {
+        report({stage:'package',message:'Compressing original font tables as WOFF2'});
+        if (module.ccall('ff_encode_woff2','number',['string','string'],[inputPath,'/packed.woff2']))
+          throw new FontForgeError('CONVERSION_FAILED','Could not compress font tables.');
+        const output = module.FS.readFile('/packed.woff2');
+        validateFont(output, 'woff2', {preserveTables:true});
+        return {bytes:output};
+      }
+      // Outline editing still requires a static font; never silently drop axes.
+      validateSfnt(bytes);
     }
     if (inputFormat === 'fon' && format !== 'fon') report({stage:'decode',message:'Tracing bitmap pixels as rectangular outlines (no smoothing)'});
     const nativeExtension = format === 'eot' || format === 'ttc' ? 'ttf' : format;
@@ -43,7 +66,7 @@ export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIn
     const result = module.ccall('ff_convert', 'number', ['string', 'string', 'number'],
       [inputPath, outputPath, target.native]);
     if (result === 6) throw new FontForgeError('UNSUPPORTED_FONT','Bitmap-only input needs tracing before outline conversion.');
-    if (result === 3) throw new FontForgeError('UNSUPPORTED_FONT','CID subfonts and multiple-master fonts are not supported.');
+    if (result === 3) throw new FontForgeError('UNSUPPORTED_FONT','Multiple-master fonts require a static instance.');
     if (result !== 0) throw new Error(`FontForge could not convert this font (status ${result}).`);
     report({ stage: 'converted', message: 'FontForge conversion finished', durationMs: performance.now() - started });
     report({ stage: 'output', message: 'Reading and validating output font' });

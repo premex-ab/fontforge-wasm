@@ -3,27 +3,43 @@ import { FontForgeError, validateFont, MAX_INPUT_BYTES } from './validate.js';
 import { FORMATS, getFormat } from './formats.js';
 export { FontForgeError, MAX_INPUT_BYTES, FORMATS };
 let browserAssets;
+// OFC patch: bounded downloads, validated assets, and a revision that bypasses old SW caches.
 function loadBrowserAssets(cache) {
-  const load = () => Promise.all([
-    fetch(new URL('../dist/browser-worker.mjs', import.meta.url), { cache }),
-    fetch(new URL('../dist/fontforge-core.wasm', import.meta.url), { cache }),
+  if (cache !== 'no-store' && browserAssets) return browserAssets;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 120000);
+  const asset = name => new URL(`../dist/${name}?v=20261016b`, import.meta.url);
+  const pending = Promise.all([
+    fetch(asset('browser-worker.mjs'), { cache, signal: controller.signal }),
+    fetch(asset('fontforge-core.wasm'), { cache, signal: controller.signal }),
   ]).then(async ([script, wasm]) => {
     if (!script.ok || !wasm.ok) throw new Error('Could not load FontForge engine assets.');
-    return { code: await script.text(), wasmBinary: await wasm.arrayBuffer() };
-  }).catch(error => { browserAssets = undefined; throw error; });
-  if (cache === 'no-store') return load();
-  return browserAssets ??= load();
+    const [code, wasmBinary] = await Promise.all([script.text(), wasm.arrayBuffer()]);
+    const magic = new Uint8Array(wasmBinary, 0, Math.min(4, wasmBinary.byteLength));
+    if (magic.length !== 4 || magic.some((value, index) => value !== [0,97,115,109][index]) || /^\s*</.test(code))
+      throw new Error('Invalid FontForge engine assets.');
+    return {code, wasmBinary};
+  }).catch(error => {
+    if (browserAssets === pending) browserAssets = undefined;
+    throw error;
+  }).finally(() => { clearTimeout(timer); controller.abort(); });
+  // Successful retries replace failed/stale in-memory assets as well.
+  browserAssets = pending;
+  return pending;
 }
 
 /** Convert in a disposable worker. The caller's input buffer is never detached. */
-export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress, cache = 'default', inputFormat, faceIndex = 0 } = {}) {
+export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress, cache = 'default', inputFormat, faceIndex = 0, variations } = {}) {
   if (!getFormat(format)?.output) throw new FontForgeError('UNSUPPORTED_FORMAT', 'Choose an output format from FORMATS.');
   if (inputFormat && !getFormat(inputFormat)?.input) throw new FontForgeError('UNSUPPORTED_FONT', 'This input format is not supported; metrics files are export-only.');
   if (!Number.isInteger(faceIndex) || faceIndex < 0 || faceIndex > 255) throw new FontForgeError('INVALID_FACE_INDEX', 'faceIndex must be an integer from 0 to 255.');
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000) throw new RangeError('timeoutMs must be between 1 and 300000.');
   if (signal?.aborted) throw new FontForgeError('ABORTED', 'Conversion was cancelled.');
   if (cache !== 'default' && cache !== 'no-store') throw new TypeError('cache must be default or no-store.');
-  validateFont(input, inputFormat);
+  if (variations !== undefined && (!variations || typeof variations !== 'object' || Array.isArray(variations) ||
+      Object.keys(variations).length > 64 || Object.entries(variations).some(([tag,value]) => !/^[A-Za-z0-9 ]{4}$/.test(tag) || typeof value !== 'number' || !Number.isFinite(value))))
+    throw new FontForgeError('INVALID_VARIATION','Axis values must be finite numbers keyed by four-character axis tags.');
+  validateFont(input, inputFormat, {preserveTables:true});
   // Buffer.slice() in Node shares storage; Uint8Array.from() always copies.
   const bytes = Uint8Array.from(input);
   const isNode = typeof process !== 'undefined' && !!process.versions?.node;
@@ -81,10 +97,12 @@ export async function convert(input, { format, signal, timeoutMs = 30_000, onPro
         worker.onerror = failed;
         worker.onmessageerror = () => failed(new Error('Invalid message from conversion worker.'));
       }
-      worker.postMessage({ bytes, format, wasmBinary, inputFormat, faceIndex }, [bytes.buffer]);
+      worker.postMessage({ bytes, format, wasmBinary, inputFormat, faceIndex, variations }, [bytes.buffer]);
     })().catch(failed);
   });
 }
 
 export { execute } from './execute.js';
 export { SCRIPT_LIMITS } from './script-validate.js';
+
+export { inspectVariations } from './variations.js';

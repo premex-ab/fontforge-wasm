@@ -8,7 +8,7 @@ wrapper, build scripts, examples and tests use the same license. Individual
 upstream files retain their original license notices. See `LICENSE` and the
 `licenses/` directory shipped with every package.
 
-Pinned native dependencies are recorded in `build/sources.json`:
+Pinned native dependencies are recorded in `build/sources.json` and `build/harfbuzz.json`:
 
 - FontForge 20251009: GPL-3.0-or-later as a whole, with substantial BSD-3-Clause code.
 - GLib: LGPL-2.1-or-later.
@@ -18,6 +18,7 @@ Pinned native dependencies are recorded in `build/sources.json`:
 - PCRE2: BSD-3-Clause and included upstream notices.
 - zlib: zlib license.
 - WOFF2 and Brotli: MIT licenses.
+- HarfBuzz: MIT-style license; used for static variable-font instancing.
 - GNU libiconv/libcharset: LGPL-2.1-or-later library code and included notices.
 - Emscripten runtime and bundled system libraries: see `licenses/emscripten/`.
 

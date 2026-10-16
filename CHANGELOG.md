@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0-alpha.3
+
+- Inspect variable-font axes and instantiate selected coordinates locally with HarfBuzz 14.6.0.
+- `convert(input, { format: 'otf', variations: { wght: 700 } })` pins omitted axes to defaults and produces a static font before conversion.
+- Reject invalid coordinates; preserve variable tables when instancing is not requested.
+- Include a generated variable-font fixture and static-instance regression tests.
+
+## 0.3.0-alpha.2
+
+- Flatten CID subfonts before outline conversion.
+- Repackage TTF/OTF as WOFF2 and unwrap webfonts without redrawing outlines, preserving variation, color, layout and CID tables.
+- Return STATIC_INSTANCE_REQUIRED for unsupported variable-to-outline conversions; never silently discard axes.
+- Bound browser asset downloads, validate WASM responses and replace stale cached assets after retry.
+- Add synthetic CID and variable-container regression tests.
+
 ## 0.3.0-alpha.1
 
 - Add SFD, BDF, FNT, OTB and Palm PDB import/export, and PCF import.

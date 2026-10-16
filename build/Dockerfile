@@ -62,7 +62,17 @@ RUN python3 /product/build/fetch.py libiconv && cd /work/libiconv \
     && emconfigure ./configure --host=wasm32-unknown-emscripten --prefix=$PREFIX \
     --disable-shared --disable-nls --disable-extra-encodings \
     && emmake make -j4 install
-FROM codecs AS builder
+FROM codecs AS instancer
+COPY build/harfbuzz.json /product/build/harfbuzz.json
+RUN python3 -c "import json; p='/product/build/sources.json'; s=json.load(open(p)); s.append(json.load(open('/product/build/harfbuzz.json'))); json.dump(s,open(p,'w'))" \
+    && python3 /product/build/fetch.py harfbuzz
+RUN emcmake cmake -S /work/harfbuzz -B /work/harfbuzz/out -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_DISABLE_FIND_PACKAGE_Threads=ON -DCMAKE_CXX_FLAGS="-O2 -DHB_NO_MT" \
+    -DBUILD_SHARED_LIBS=OFF -DHB_BUILD_SUBSET=ON -DHB_BUILD_UTILS=OFF \
+    -DHB_HAVE_GLIB=OFF -DHB_HAVE_ICU=OFF -DHB_HAVE_FREETYPE=OFF \
+    && cmake --build /work/harfbuzz/out -j4 --target install
+FROM instancer AS builder
 COPY native /product/native
 RUN python3 /product/build/patch.py fontforge \
     && python3 /product/native/patch-formats.py \
