@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0-alpha.2
+
+- Flatten CID subfonts before outline conversion.
+- Repackage TTF/OTF as WOFF2 and unwrap webfonts without redrawing outlines, preserving variation, color, layout and CID tables.
+- Return STATIC_INSTANCE_REQUIRED for unsupported variable-to-outline conversions; never silently discard axes.
+- Bound browser asset downloads, validate WASM responses and replace stale cached assets after retry.
+- Add synthetic CID and variable-container regression tests.
+
 ## 0.3.0-alpha.1
 
 - Add SFD, BDF, FNT, OTB and Palm PDB import/export, and PCF import.

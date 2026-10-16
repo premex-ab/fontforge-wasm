@@ -14,7 +14,7 @@ target_link_options(fontforge-wasm PRIVATE
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web,worker,node
   -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=536870912 -sSTACK_SIZE=8388608
   -sFILESYSTEM=1 -sFORCE_FILESYSTEM=1
-  "-sEXPORTED_FUNCTIONS=['_ff_convert','_ff_decode_webfont','_ff_inflate_raw']"
+  "-sEXPORTED_FUNCTIONS=['_ff_convert','_ff_encode_woff2','_ff_decode_webfont','_ff_inflate_raw']"
   "-sEXPORTED_RUNTIME_METHODS=['FS','ccall']"
 )
 

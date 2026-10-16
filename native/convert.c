@@ -58,7 +58,9 @@ int ff_convert(const char *input, const char *output, int format) {
     no_windowing_ui = true;
     SplineFont *font = ReadSplineFont(input, 0);
     if (!font) return 2;
-    if (font->subfontcnt || font->mm) { SplineFontFree(font); return 3; }
+    if (font->cidmaster) font = font->cidmaster;
+    if (font->mm) { SplineFontFree(font); return 3; }
+    if (font->subfontcnt) SFFlatten(&font);
     // Bitmap inputs need explicit tracing; do not silently emit empty outlines.
     if (font->onlybitmaps && format != 21 && !(format >= 22 && format <= 25) && format != 19 && !bitmap_to_outlines(font)) { SplineFontFree(font); return 6; }
     // An explicitly present blank glyph still carries an advance width.

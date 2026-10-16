@@ -38,7 +38,7 @@ test('rejects variable tables and out-of-bounds directories', async () => {
   const input = await readFile(new URL('fixture.ttf', fixtures));
   const variable = Uint8Array.from(input);
   variable.set(new TextEncoder().encode('fvar'), 12);
-  await assert.rejects(convert(variable, { format: 'otf' }), { code: 'UNSUPPORTED_FONT' });
+  await assert.rejects(convert(variable, { format: 'otf' }), { code: 'STATIC_INSTANCE_REQUIRED' });
   const truncated = Uint8Array.from(input);
   new DataView(truncated.buffer).setUint32(20, truncated.length + 1);
   await assert.rejects(convert(truncated, { format: 'otf' }), { code: 'INVALID_FONT' });
