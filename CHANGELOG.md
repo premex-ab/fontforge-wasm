@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0-alpha.3
+
+- Inspect variable-font axes and instantiate selected coordinates locally with HarfBuzz 14.6.0.
+- `convert(input, { format: 'otf', variations: { wght: 700 } })` pins omitted axes to defaults and produces a static font before conversion.
+- Reject invalid coordinates; preserve variable tables when instancing is not requested.
+- Include a generated variable-font fixture and static-instance regression tests.
+
 ## 0.3.0-alpha.2
 
 - Flatten CID subfonts before outline conversion.

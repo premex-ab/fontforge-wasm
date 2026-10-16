@@ -5,7 +5,7 @@ import { FontForgeError, validateFont, validateSfnt } from './validate.js';
 import { getFormat } from './formats.js';
 import { extractCollection, wrapCollection, unwrapEot, wrapEot, unpackUfo, packUfo } from './containers.js';
 
-export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIndex }, report = () => {}) {
+export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIndex, variations }, report = () => {}) {
   try {
     let inputFormat = validateFont(bytes, hint, {preserveTables:true});
     const target = getFormat(format);
@@ -34,6 +34,15 @@ export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIn
         bytes = module.FS.readFile('/decoded.sfnt'); inputFormat = validateSfnt(bytes, {preserveTables:true});
         inputPath = `/decoded.${inputFormat}`; module.FS.writeFile(inputPath,bytes);
       }
+    }
+    if (variations !== undefined) {
+      if (!['ttf','otf'].includes(inputFormat)) throw new FontForgeError('INVALID_VARIATION','Static instancing requires an OpenType variable font.');
+      report({stage:'instance',message:'Creating a static font at the selected axis values'});
+      const coordinates=Object.entries(variations).map(([tag,value])=>`${tag}=${value}`).join(',');
+      if (module.ccall('ff_instance','number',['string','string','string'],[inputPath,'/instance.sfnt',coordinates]))
+        throw new FontForgeError('INVALID_VARIATION','Could not create a static instance. Check that every axis and value is supported by this font.');
+      bytes=module.FS.readFile('/instance.sfnt');inputFormat=validateSfnt(bytes);
+      inputPath=`/instance.${inputFormat}`;module.FS.writeFile(inputPath,bytes);
     }
     // Repackage rather than redraw: retain variation/color/CID tables and glyph IDs.
     if (['ttf','otf'].includes(inputFormat)) {

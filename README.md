@@ -223,3 +223,20 @@ files are never persisted. Chrome is tested with offline mode; the macOS WebKit
 runner uses failed HTTP connections because its offline emulation breaks navigation
 and Blob workers independently of the demo. No service-worker guarantee is made
 for every Safari version or private-browsing configuration.
+
+### Static variable-font instances
+
+```js
+import { inspectVariations, convert } from '@warting/fontforge-wasm';
+const axes = await inspectVariations(bytes); // tag, name, min, default, max
+const result = await convert(bytes, { format: 'otf', variations: { wght: 700 } });
+```
+
+Instancing runs locally in the WASM worker using HarfBuzz. Choose coordinates within
+the reported ranges; omitted axes are pinned to their defaults. An empty object
+creates the default static instance. Without `variations`, existing variable-font
+container conversions continue to preserve axes. TTF, OTF, WOFF and WOFF2 inputs
+are supported for axis inspection; static instancing precedes the normal export
+pipeline. Unsupported native instancing or invalid coordinates fail explicitly.
+The `instance` progress stage covers this work. This API does not edit the original
+input bytes or implement a variable-font editor.

@@ -2,12 +2,16 @@ export type FontFormat = 'ttf' | 'otf' | 'woff' | 'woff2' | 'eot' | 'svg' | 'pfa
 export type FontOutputFormat = Exclude<FontFormat, 'pcf'>;
 export type FontInputFormat = Exclude<FontFormat, 'afm' | 'pfm' | 'tfm'>;
 export interface ConversionProgress {
-  stage: 'assets' | 'worker' | 'initialize' | 'input' | 'convert' | 'converted' | 'output' | 'decode' | 'package';
+  stage: 'assets' | 'worker' | 'initialize' | 'input' | 'convert' | 'converted' | 'output' | 'decode' | 'package' | 'instance';
   message: string;
   /** Measured inside the worker for the native conversion stage. */
   durationMs?: number;
 }
+export interface VariationAxis { tag: string; name: string; min: number; default: number; max: number; }
+export declare function inspectVariations(input: Uint8Array, options?: {signal?: AbortSignal; timeoutMs?: number}): Promise<VariationAxis[]>;
 export interface ConvertOptions {
+  /** Pin all axes: provided coordinates override defaults; {} creates the default static instance. */
+  variations?: Record<string, number>;
   format: FontOutputFormat;
   /** Optional hint for ambiguous legacy containers and PostScript aliases. */
   inputFormat?: FontInputFormat;

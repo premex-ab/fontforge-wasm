@@ -29,13 +29,16 @@ function loadBrowserAssets(cache) {
 }
 
 /** Convert in a disposable worker. The caller's input buffer is never detached. */
-export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress, cache = 'default', inputFormat, faceIndex = 0 } = {}) {
+export async function convert(input, { format, signal, timeoutMs = 30_000, onProgress, cache = 'default', inputFormat, faceIndex = 0, variations } = {}) {
   if (!getFormat(format)?.output) throw new FontForgeError('UNSUPPORTED_FORMAT', 'Choose an output format from FORMATS.');
   if (inputFormat && !getFormat(inputFormat)?.input) throw new FontForgeError('UNSUPPORTED_FONT', 'This input format is not supported; metrics files are export-only.');
   if (!Number.isInteger(faceIndex) || faceIndex < 0 || faceIndex > 255) throw new FontForgeError('INVALID_FACE_INDEX', 'faceIndex must be an integer from 0 to 255.');
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000) throw new RangeError('timeoutMs must be between 1 and 300000.');
   if (signal?.aborted) throw new FontForgeError('ABORTED', 'Conversion was cancelled.');
   if (cache !== 'default' && cache !== 'no-store') throw new TypeError('cache must be default or no-store.');
+  if (variations !== undefined && (!variations || typeof variations !== 'object' || Array.isArray(variations) ||
+      Object.keys(variations).length > 64 || Object.entries(variations).some(([tag,value]) => !/^[A-Za-z0-9 ]{4}$/.test(tag) || typeof value !== 'number' || !Number.isFinite(value))))
+    throw new FontForgeError('INVALID_VARIATION','Axis values must be finite numbers keyed by four-character axis tags.');
   validateFont(input, inputFormat, {preserveTables:true});
   // Buffer.slice() in Node shares storage; Uint8Array.from() always copies.
   const bytes = Uint8Array.from(input);
@@ -94,10 +97,12 @@ export async function convert(input, { format, signal, timeoutMs = 30_000, onPro
         worker.onerror = failed;
         worker.onmessageerror = () => failed(new Error('Invalid message from conversion worker.'));
       }
-      worker.postMessage({ bytes, format, wasmBinary, inputFormat, faceIndex }, [bytes.buffer]);
+      worker.postMessage({ bytes, format, wasmBinary, inputFormat, faceIndex, variations }, [bytes.buffer]);
     })().catch(failed);
   });
 }
 
 export { execute } from './execute.js';
 export { SCRIPT_LIMITS } from './script-validate.js';
+
+export { inspectVariations } from './variations.js';
