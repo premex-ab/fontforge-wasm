@@ -2,14 +2,23 @@
 """Independent semantic validation using fontTools, not the converting engine."""
 from pathlib import Path
 from fontTools.ttLib import TTFont
+from fontTools.varLib.instancer import instantiateVariableFont
 
 root = Path(__file__).parent
 results = list((root / 'results').glob('*.*tf'))
 assert len(results) >= 4, 'Run npm test first'
 for path in results:
     original = path.name.split('-')[0]
-    source = TTFont(root / 'fixtures' / f'fixture.{original}')
+    if original == 'instance':
+        weight = int(path.stem.split('-')[1])
+        source = instantiateVariableFont(
+            TTFont(root / 'fixtures' / 'variable.ttf'), {'wght': weight}, inplace=False)
+    else:
+        source = TTFont(root / 'fixtures' / f'fixture.{original}')
     output = TTFont(path, checkChecksums=2)
+    if original == 'instance':
+        assert not any(tag in output for tag in ['fvar', 'gvar', 'HVAR', 'MVAR']), path
+        assert output['OS/2'].usWeightClass == weight, path
     assert output.getBestCmap() == source.getBestCmap(), path
     assert output['head'].unitsPerEm == source['head'].unitsPerEm, path
     assert output['name'].getDebugName(1) == source['name'].getDebugName(1), path
