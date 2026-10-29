@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import {validateSfnt, FontForgeError} from './validate.js';
+import {validateSfnt, FontForgeError, requiresEditPermission} from './validate.js';
 import {convert} from './index.js';
-export async function inspectVariations(input, options={}) {
+export async function inspectFont(input, options={}) {
   let bytes=input;
   if (!(bytes instanceof Uint8Array) || bytes.length<12) throw new FontForgeError('INVALID_FONT','Invalid font.');
   const head=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength), magic=head.getUint32(0);
@@ -9,7 +9,8 @@ export async function inspectVariations(input, options={}) {
   validateSfnt(bytes,{preserveTables:true});
   const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength), tables=new Map();
   for(let i=0;i<v.getUint16(4);i++){const at=12+i*16;tables.set(String.fromCharCode(...bytes.slice(at,at+4)),{at:v.getUint32(at+8),length:v.getUint32(at+12)});}
-  const f=tables.get('fvar');if(!f)return [];
+  const restricted=requiresEditPermission(bytes);
+  const f=tables.get('fvar');if(!f)return {axes:[],requiresEditPermission:restricted};
   const invalid=()=>{throw new FontForgeError('INVALID_FONT','Invalid variation axis table.');};
   if(f.length<16 || v.getUint16(f.at)!==1)invalid();
   const offset=v.getUint16(f.at+4),count=v.getUint16(f.at+8),size=v.getUint16(f.at+10);
@@ -23,10 +24,13 @@ export async function inspectVariations(input, options={}) {
     }
   }
   const labels={wght:'Weight',wdth:'Width',slnt:'Slant',ital:'Italic',opsz:'Optical size',GRAD:'Grade'};
-  return Array.from({length:count},(_,i)=>{
+  const axes=Array.from({length:count},(_,i)=>{
     const at=f.at+offset+i*size,tag=String.fromCharCode(...bytes.slice(at,at+4));
     const min=v.getInt32(at+4)/65536,def=v.getInt32(at+8)/65536,max=v.getInt32(at+12)/65536;
     if(!/^[A-Za-z0-9 ]{4}$/.test(tag)||min>def||def>max)invalid();
     return {tag,name:names.get(v.getUint16(at+18))||labels[tag]||tag,min,default:def,max};
   });
+  return {axes,requiresEditPermission:restricted};
 }
+
+export async function inspectVariations(input, options={}) {return (await inspectFont(input,options)).axes;}

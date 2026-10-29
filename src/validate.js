@@ -145,3 +145,13 @@ export function validateFont(bytes, hint, { preserveTables = false } = {}) {
   if (hint && ['afm', 'pfm', 'tfm'].includes(hint)) throw new FontForgeError('UNSUPPORTED_FONT', 'Metrics files contain no outlines and are export-only.');
   throw new FontForgeError('UNSUPPORTED_FONT', 'Unrecognized or unsupported font. Use a supported static font or a ZIP containing one UFO.');
 }
+
+// Caller must validate the SFNT before inspecting its directory. Do not clear this flag.
+export function requiresEditPermission(bytes) {
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  for(let i=0;i<view.getUint16(4);i++){const at=12+i*16;
+    if(view.getUint32(at)===0x4f532f32 && view.getUint32(at+12)>=10)
+      return !!(view.getUint16(view.getUint32(at+8)+8)&2);
+  }
+  return false;
+}

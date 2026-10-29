@@ -240,3 +240,12 @@ are supported for axis inspection; static instancing precedes the normal export
 pipeline. Unsupported native instancing or invalid coordinates fail explicitly.
 The `instance` progress stage covers this work. This API does not edit the original
 input bytes or implement a variable-font editor.
+
+### Restricted font metadata
+
+`inspectFont(bytes)` returns `{ axes, requiresEditPermission }`. Outline conversion
+of a font carrying the restricted OS/2 embedding flag reports
+`FONT_PERMISSION_REQUIRED` by default. A caller who has permission to modify it
+can pass `allowRestricted: true`; this confirms permission to FontForge and does
+not clear the font's embedding flags. Container-only WOFF/WOFF2 exports preserve
+the original tables. The flag is metadata, not a determination of legal rights.

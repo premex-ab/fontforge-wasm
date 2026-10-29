@@ -13,6 +13,8 @@ export interface ConvertOptions {
   /** Pin all axes: provided coordinates override defaults; {} creates the default static instance. */
   variations?: Record<string, number>;
   format: FontOutputFormat;
+  /** Explicit confirmation that the caller has permission to modify a restricted font. Does not remove embedding flags. */
+  allowRestricted?: boolean;
   /** Optional hint for ambiguous legacy containers and PostScript aliases. */
   inputFormat?: FontInputFormat;
   /** Zero-based face index for TTC input. Defaults to 0. */
@@ -73,3 +75,5 @@ export interface ExecuteResult {
 export declare const SCRIPT_LIMITS: Readonly<Required<ScriptLimits>>;
 /** Executes the FontForge native language, not Python or a shell. One worker per call. */
 export declare function execute(script: string, options?: ExecuteOptions): Promise<ExecuteResult>;
+
+export function inspectFont(input: Uint8Array, options?: Partial<ConvertOptions>): Promise<{axes: VariationAxis[]; requiresEditPermission: boolean}>;
