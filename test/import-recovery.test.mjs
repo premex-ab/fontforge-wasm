@@ -20,3 +20,11 @@ test('WOFF wrapping preserves variable axes without selecting an instance',async
  const roundtrip=await convert(woff,{format:'ttf'});const tables=bytes=>{const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);return Array.from({length:v.getUint16(4)},(_,i)=>{const at=12+i*16,tag=v.getUint32(at),start=v.getUint32(at+8),data=bytes.slice(start,start+v.getUint32(at+12));if(tag===0x68656164)data.fill(0,8,12);return {tag,data}})};
  assert.deepEqual(tables(roundtrip),tables(input));
 });
+
+test('TrueType-specific head flags do not shift CFF outline positions',async()=>{
+ const source=new Uint8Array(await readFile('test/fixtures/fixture.otf'));
+ function table(bytes,tag){const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);for(let i=0;i<v.getUint16(4);i++){const at=12+16*i;if(v.getUint32(at)===tag)return [v.getUint32(at+8),v.getUint32(at+12)]}}
+ const view=new DataView(source.buffer);const [head]=table(source,0x68656164);view.setUint16(head+16,view.getUint16(head+16)|2);const before=await convert(source,{format:'ttf'});
+ view.setUint16(head+16,view.getUint16(head+16)&~2);const after=await convert(source,{format:'ttf'});
+ for(const tag of [0x676c7966,0x686d7478]){const [a,al]=table(before,tag),[b,bl]=table(after,tag);assert.deepEqual(before.slice(a,a+al),after.slice(b,b+bl))}
+});
