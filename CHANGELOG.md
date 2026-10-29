@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0-alpha.4
+
+- Decode WOFF2 using a bounded output buffer independent of its estimated SFNT size.
+- Preserve original tables and variable axes when exporting WOFF; repair whole-font checksums on WOFF decoding.
+- Expose `inspectFont` metadata and `FONT_PERMISSION_REQUIRED` for restricted outlines.
+- Add explicit `allowRestricted` permission confirmation without clearing embedding restrictions.
+- Add synthetic permission, WOFF2-size and variable-WOFF regressions.
+
 ## 0.3.0-alpha.3
 
 - Inspect variable-font axes and instantiate selected coordinates locally with HarfBuzz 14.6.0.

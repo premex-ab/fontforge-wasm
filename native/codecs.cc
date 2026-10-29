@@ -25,6 +25,8 @@ extern "C" int ff_decode_webfont(const char *input, const char *output) {
     if (expected<12 || expected>LIMIT) return 2;
     std::vector<uint8_t> decoded(expected,0);
     if (u32(data.data())==0x774f4632) {
+        // totalSfntSize is an estimate: reconstructed glyf padding may be larger.
+        decoded.resize(LIMIT);
         woff2::WOFF2MemoryOut out(decoded.data(),decoded.size());
         if (!woff2::ConvertWOFF2ToTTF(data.data(),data.size(),&out)) return 3;
         decoded.resize(out.Size());
@@ -49,6 +51,15 @@ extern "C" int ff_decode_webfont(const char *input, const char *output) {
             cursor+=(length+3)&~size_t(3);
         }
         if (cursor!=expected) return 3;
+        // Reordering table payloads changes the whole-font checksum adjustment.
+        for(unsigned i=0;i<count;i++) {
+            const uint8_t *entry=decoded.data()+12+16*i;
+            if(u32(entry)==0x68656164 && u32(entry+12)>=12) {
+                size_t at=u32(entry+8)+8;put32(decoded.data()+at,0);
+                uint32_t sum=0;for(size_t j=0;j+4<=decoded.size();j+=4)sum+=u32(decoded.data()+j);
+                put32(decoded.data()+at,0xb1b0afba-sum);break;
+            }
+        }
     } else return 3;
     file=fopen(output,"wb"); if (!file) return 4;
     bool written=fwrite(decoded.data(),1,decoded.size(),file)==decoded.size();fclose(file);
@@ -83,4 +94,29 @@ extern "C" int ff_encode_woff2(const char *input, const char *output) {
     if (!woff2::ConvertTTFToWOFF2(in.data(),in.size(),out.data(),&size)) return 3;
     f=fopen(output,"wb");if (!f) return 4;
     bool ok=fwrite(out.data(),1,size,f)==size;fclose(f);return ok?0:4;
+}
+
+// WOFF is a table container too: keep variable/CFF tables without outline editing.
+extern "C" int ff_encode_woff(const char *input, const char *output) {
+    FILE *f=fopen(input,"rb");if(!f)return 1;
+    fseek(f,0,SEEK_END);long size=ftell(f);rewind(f);
+    if(size<12 || size>long(LIMIT)){fclose(f);return 1;}
+    std::vector<uint8_t> source(size);bool ok=fread(source.data(),1,size,f)==size_t(size);fclose(f);if(!ok)return 1;
+    unsigned count=(source[4]<<8)|source[5];if(!count||count>256||12+16*count>source.size())return 2;
+    std::vector<uint8_t> out(44+20*count,0);size_t sfntSize=12+16*count;
+    for(unsigned i=0;i<count;i++){
+        const uint8_t *entry=source.data()+12+16*i;size_t offset=u32(entry+8),length=u32(entry+12);
+        if(offset>source.size()||length>source.size()-offset)return 2;
+        uLongf capacity=compressBound(length);std::vector<uint8_t> packed(capacity);
+        if(compress2(packed.data(),&capacity,source.data()+offset,length,9)!=Z_OK)return 3;
+        size_t stored=capacity<length?capacity:length,cursor=out.size();
+        if(cursor+stored+3>LIMIT)return 2;
+        out.resize((cursor+stored+3)&~size_t(3),0);uint8_t *table=out.data()+44+20*i;
+        memcpy(table,entry,4);put32(table+4,cursor);put32(table+8,stored);put32(table+12,length);memcpy(table+16,entry+4,4);
+        if(stored)memcpy(out.data()+cursor,capacity<length?packed.data():source.data()+offset,stored);
+        sfntSize+=(length+3)&~size_t(3);
+    }
+    if(sfntSize>LIMIT)return 2;
+    put32(out.data(),0x774f4646);put32(out.data()+4,u32(source.data()));put32(out.data()+8,out.size());put16(out.data()+12,count);put32(out.data()+16,sfntSize);
+    f=fopen(output,"wb");if(!f)return 4;ok=fwrite(out.data(),1,out.size(),f)==out.size();fclose(f);return ok?0:4;
 }

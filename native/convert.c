@@ -52,11 +52,11 @@ static int bitmap_to_outlines(SplineFont *font) {
 }
 
 // Numeric format IDs are our ABI, not FontForge's internal enum values.
-int ff_convert(const char *input, const char *output, int format) {
+int ff_convert_with_options(const char *input, const char *output, int format, int allow_restricted) {
     if (format < 1 || format > 25) return 1;
     doinitFontForgeMain();
     no_windowing_ui = true;
-    SplineFont *font = ReadSplineFont(input, 0);
+    SplineFont *font = ReadSplineFont(input, allow_restricted ? of_fstypepermitted : 0);
     if (!font) return 2;
     if (font->cidmaster) font = font->cidmaster;
     if (font->mm) { SplineFontFree(font); return 3; }
@@ -110,4 +110,8 @@ int ff_convert(const char *input, const char *output, int format) {
     EncMapFree(map);
     SplineFontFree(font);
     return result?0:5;
+}
+
+int ff_convert(const char *input, const char *output, int format) {
+    return ff_convert_with_options(input, output, format, 0);
 }
