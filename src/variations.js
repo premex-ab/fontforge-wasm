@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import {validateSfnt, FontForgeError, requiresEditPermission} from './validate.js';
+import {validateSfnt, normalizeTrueType, FontForgeError, requiresEditPermission} from './validate.js';
 import {convert} from './index.js';
 export async function inspectFont(input, options={}) {
-  let bytes=input;
+  let bytes=normalizeTrueType(input);
   if (!(bytes instanceof Uint8Array) || bytes.length<12) throw new FontForgeError('INVALID_FONT','Invalid font.');
   const head=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength), magic=head.getUint32(0);
   if(magic===0x774f4646 || magic===0x774f4632) bytes=await convert(bytes,{...options,format:head.getUint32(4)===0x4f54544f?'otf':'ttf'});

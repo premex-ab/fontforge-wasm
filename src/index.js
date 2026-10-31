@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { FontForgeError, validateFont, MAX_INPUT_BYTES } from './validate.js';
+import { FontForgeError, validateFont, normalizeTrueType, MAX_INPUT_BYTES } from './validate.js';
 import { FORMATS, getFormat } from './formats.js';
 export { FontForgeError, MAX_INPUT_BYTES, FORMATS };
 let browserAssets;
@@ -42,7 +42,7 @@ export async function convert(input, { format, signal, timeoutMs = 30_000, onPro
   if(typeof allowRestricted !== 'boolean') throw new TypeError('allowRestricted must be a boolean.');
   validateFont(input, inputFormat, {preserveTables:true});
   // Buffer.slice() in Node shares storage; Uint8Array.from() always copies.
-  const bytes = Uint8Array.from(input);
+  const bytes = Uint8Array.from(normalizeTrueType(input));
   const isNode = typeof process !== 'undefined' && !!process.versions?.node;
   return new Promise((resolve, reject) => {
     let worker, workerUrl, timer;
