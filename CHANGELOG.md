@@ -1,3 +1,7 @@
+# 0.3.0-alpha.5
+
+- Accept legacy Apple TrueType (`true`) SFNT headers, canonicalize the version and whole-font checksum without changing glyph tables, and preserve caller-owned input buffers.
+
 # Changelog
 
 ## 0.3.0-alpha.4

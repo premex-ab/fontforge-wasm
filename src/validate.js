@@ -17,7 +17,7 @@ export function validateSfnt(bytes, { preserveTables = false } = {}) {
   if (bytes.length < 12) invalid();
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const signature = view.getUint32(0);
-  if (signature !== 0x00010000 && signature !== 0x4f54544f) {
+  if (signature !== 0x00010000 && signature !== 0x74727565 && signature !== 0x4f54544f) {
     throw new FontForgeError('UNSUPPORTED_FONT', 'Expected a single static TTF or CFF-based OTF font.');
   }
   const count = view.getUint16(4);
@@ -35,10 +35,10 @@ export function validateSfnt(bytes, { preserveTables = false } = {}) {
   for (const required of ['head', 'hhea', 'hmtx', 'maxp', 'cmap', 'name']) {
     if (!tables.has(required)) invalid();
   }
-  if (signature === 0x00010000 && tables.has('EBDT') && tables.has('EBLC') && (!tables.has('glyf') || [...Array(count).keys()].some(i => view.getUint32(12+i*16) === 0x676c7966 && view.getUint32(24+i*16) === 0))) return 'otb';
-  if (signature === 0x00010000 && (!tables.has('glyf') || !tables.has('loca'))) invalid();
+  if (signature !== 0x4f54544f && tables.has('EBDT') && tables.has('EBLC') && (!tables.has('glyf') || [...Array(count).keys()].some(i => view.getUint32(12+i*16) === 0x676c7966 && view.getUint32(24+i*16) === 0))) return 'otb';
+  if (signature !== 0x4f54544f && (!tables.has('glyf') || !tables.has('loca'))) invalid();
   if (signature === 0x4f54544f && !(tables.has('CFF ') || preserveTables && tables.has('CFF2'))) invalid();
-  return signature === 0x00010000 ? 'ttf' : 'otf';
+  return signature === 0x4f54544f ? 'otf' : 'ttf';
 }
 
 
@@ -49,7 +49,7 @@ export function validateFont(bytes, hint, { preserveTables = false } = {}) {
   if (bytes.length < 12) invalid();
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const signature = v.getUint32(0);
-  if (signature === 0x00010000 || signature === 0x4f54544f) return validateSfnt(bytes, {preserveTables});
+  if (signature === 0x00010000 || signature === 0x74727565 || signature === 0x4f54544f) return validateSfnt(bytes, {preserveTables});
   if (signature === 0x774f4646 || signature === 0x774f4632) {
     const woff2 = signature === 0x774f4632;
     const header = woff2 ? 48 : 44;
@@ -154,4 +154,28 @@ export function requiresEditPermission(bytes) {
       return !!(view.getUint16(view.getUint32(at+8)+8)&2);
   }
   return false;
+}
+
+// Legacy Apple TrueType uses "true" as its SFNT version. Canonicalize only
+// the header and whole-font checksum before passing it to webfont codecs.
+export function normalizeTrueType(input) {
+  if (!(input instanceof Uint8Array) || input.length < 4 || new DataView(input.buffer,input.byteOffset,input.byteLength).getUint32(0) !== 0x74727565) return input;
+  validateSfnt(input,{preserveTables:true});
+  const bytes=Uint8Array.from(input), view=new DataView(bytes.buffer);
+  view.setUint32(0,0x00010000);
+  for(let i=0;i<view.getUint16(4);i++) {
+    const at=12+i*16;
+    if(view.getUint32(at)!==0x68656164)continue;
+    const offset=view.getUint32(at+8), length=view.getUint32(at+12);
+    if(length<12)throw new FontForgeError('INVALID_FONT','Invalid head table.');
+    view.setUint32(offset+8,0);
+    let sum=0;
+    for(let n=0;n<bytes.length;n+=4) {
+      let word=0;for(let j=0;j<4;j++)word=(word<<8)|(bytes[n+j]||0);
+      sum=(sum+(word>>>0))>>>0;
+    }
+    view.setUint32(offset+8,(0xb1b0afba-sum)>>>0);
+    break;
+  }
+  return bytes;
 }

@@ -28,3 +28,19 @@ test('TrueType-specific head flags do not shift CFF outline positions',async()=>
  view.setUint16(head+16,view.getUint16(head+16)&~2);const after=await convert(source,{format:'ttf'});
  for(const tag of [0x676c7966,0x686d7478]){const [a,al]=table(before,tag),[b,bl]=table(after,tag);assert.deepEqual(before.slice(a,a+al),after.slice(b,b+bl))}
 });
+
+test('legacy Apple TrueType headers convert without mutating input or losing glyph tables',async()=>{
+ const original=new Uint8Array(await readFile('test/fixtures/fixture.ttf'));
+ const legacy=Uint8Array.from(original);new DataView(legacy.buffer).setUint32(0,0x74727565);
+ const saved=Uint8Array.from(legacy);
+ const ttf=await convert(legacy,{format:'ttf'});assert.equal(new DataView(ttf.buffer).getUint32(0),0x10000);
+ assert.deepEqual(legacy,saved);assert.deepEqual((await inspectFont(legacy)).axes,[]);
+ let sum=0;for(let at=0;at<ttf.length;at+=4){let word=0;for(let j=0;j<4;j++)word=(word<<8)|(ttf[at+j]||0);sum=(sum+(word>>>0))>>>0;}assert.equal(sum,0xb1b0afba);
+ const table=(bytes,tag)=>{const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);for(let i=0;i<v.getUint16(4);i++){const at=12+16*i;if(String.fromCharCode(...bytes.slice(at,at+4))===tag)return bytes.slice(v.getUint32(at+8),v.getUint32(at+8)+v.getUint32(at+12));}throw Error(tag)};
+ for(const format of ['woff','woff2']) {
+  const packed=await convert(legacy,{format});const roundtrip=await convert(packed,{format:'ttf'});
+  for(const tag of ['cmap','hmtx','maxp'])assert.deepEqual(table(roundtrip,tag),table(original,tag));
+ }
+ assert((await convert(legacy,{format:'otf'})).length>0);
+ const broken=legacy.slice(0,20);await assert.rejects(convert(broken,{format:'woff2'}),{code:'INVALID_FONT'});
+});
