@@ -16,7 +16,7 @@ export function validateSfnt(bytes, { preserveTables = false } = {}) {
   const invalid = () => { throw new FontForgeError('INVALID_FONT', 'Invalid or truncated font.'); };
   if (bytes.length < 12) invalid();
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const signature = view.getUint32(0);
+  let signature = view.getUint32(0);
   if (signature !== 0x00010000 && signature !== 0x74727565 && signature !== 0x4f54544f) {
     throw new FontForgeError('UNSUPPORTED_FONT', 'Expected a single static TTF or CFF-based OTF font.');
   }
@@ -32,6 +32,9 @@ export function validateSfnt(bytes, { preserveTables = false } = {}) {
     if (!preserveTables && unsupported.has(tag)) throw new FontForgeError(tag === 'fvar' || tag === 'CFF2' ? 'STATIC_INSTANCE_REQUIRED' : 'UNSUPPORTED_FONT', tag === 'fvar' || tag === 'CFF2' ? 'This conversion needs a static font instance. Choose TTF or WOFF2 to preserve variable axes, or export a static instance first.' : `Unsupported table in this alpha: ${tag}`);
     tables.add(tag);
   }
+  // Some CFF fonts carry the TrueType version despite containing no glyf/loca.
+  // Infer only this unambiguous mismatch; never choose between mixed outline sets.
+  if (signature === 0x00010000 && tables.has('CFF ') && !tables.has('glyf') && !tables.has('loca')) signature = 0x4f54544f;
   for (const required of ['head', 'hhea', 'hmtx', 'maxp', 'cmap', 'name']) {
     if (!tables.has(required)) invalid();
   }
@@ -156,13 +159,17 @@ export function requiresEditPermission(bytes) {
   return false;
 }
 
-// Legacy Apple TrueType uses "true" as its SFNT version. Canonicalize only
-// the header and whole-font checksum before passing it to webfont codecs.
+// Canonicalize legacy Apple TrueType and unambiguous mislabeled CFF headers.
+// Only the SFNT version and whole-font checksum change; all tables are retained.
 export function normalizeTrueType(input) {
-  if (!(input instanceof Uint8Array) || input.length < 4 || new DataView(input.buffer,input.byteOffset,input.byteLength).getUint32(0) !== 0x74727565) return input;
-  validateSfnt(input,{preserveTables:true});
+  if (!(input instanceof Uint8Array) || input.length < 4) return input;
+  const signature = new DataView(input.buffer,input.byteOffset,input.byteLength).getUint32(0);
+  if (![0x74727565,0x00010000].includes(signature)) return input;
+  const format = validateSfnt(input,{preserveTables:true});
+  const canonical = format === 'otf' ? 0x4f54544f : 0x00010000;
+  if (signature === canonical) return input;
   const bytes=Uint8Array.from(input), view=new DataView(bytes.buffer);
-  view.setUint32(0,0x00010000);
+  view.setUint32(0,canonical);
   for(let i=0;i<view.getUint16(4);i++) {
     const at=12+i*16;
     if(view.getUint32(at)!==0x68656164)continue;

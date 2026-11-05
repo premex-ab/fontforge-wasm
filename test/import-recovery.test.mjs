@@ -44,3 +44,19 @@ test('legacy Apple TrueType headers convert without mutating input or losing gly
  assert((await convert(legacy,{format:'otf'})).length>0);
  const broken=legacy.slice(0,20);await assert.rejects(convert(broken,{format:'woff2'}),{code:'INVALID_FONT'});
 });
+
+test('CFF outlines mislabeled as TrueType normalize without losing tables or mutating input',async()=>{
+ const {normalizeTrueType,validateSfnt}=await import('../src/validate.js');
+ const original=new Uint8Array(await readFile('test/fixtures/fixture.otf'));
+ const wrong=Uint8Array.from(original);new DataView(wrong.buffer).setUint32(0,0x10000);const saved=Uint8Array.from(wrong);
+ const fixed=normalizeTrueType(wrong);assert.equal(new DataView(fixed.buffer).getUint32(0),0x4f54544f);assert.deepEqual(wrong,saved);
+ const table=(bytes,tag)=>{const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);for(let i=0;i<v.getUint16(4);i++){const p=12+16*i;if(String.fromCharCode(...bytes.slice(p,p+4))===tag)return bytes.slice(v.getUint32(p+8),v.getUint32(p+8)+v.getUint32(p+12));}throw Error(tag)};
+ for(const tag of ['CFF ','cmap','hmtx','maxp','name','OS/2'])assert.deepEqual(table(fixed,tag),table(original,tag));
+ let sum=0;for(let at=0;at<fixed.length;at+=4){let word=0;for(let j=0;j<4;j++)word=(word<<8)|(fixed[at+j]||0);sum=(sum+(word>>>0))>>>0}assert.equal(sum,0xb1b0afba);
+ assert.deepEqual(await inspectFont(wrong),await inspectFont(original));
+ for(const format of ['ttf','woff','woff2'])assert.deepEqual(await convert(wrong,{format}),await convert(fixed,{format}));
+ const truncated=wrong.slice(0,100);assert.throws(()=>normalizeTrueType(truncated),{code:'INVALID_FONT'});
+ // A partial TrueType outline set is ambiguous and must not be relabeled.
+ const mixed=Uint8Array.from(wrong),v=new DataView(mixed.buffer);for(let i=0;i<v.getUint16(4);i++){const p=12+16*i;if(v.getUint32(p)===0x706f7374)v.setUint32(p,0x676c7966)}
+ assert.throws(()=>validateSfnt(mixed),{code:'INVALID_FONT'});
+});
