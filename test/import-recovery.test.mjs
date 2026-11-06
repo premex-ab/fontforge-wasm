@@ -60,3 +60,17 @@ test('CFF outlines mislabeled as TrueType normalize without losing tables or mut
  const mixed=Uint8Array.from(wrong),v=new DataView(mixed.buffer);for(let i=0;i<v.getUint16(4);i++){const p=12+16*i;if(v.getUint32(p)===0x706f7374)v.setUint32(p,0x676c7966)}
  assert.throws(()=>validateSfnt(mixed),{code:'INVALID_FONT'});
 });
+
+test('nameless subsets retain outlines and metrics when converted to OTF',async()=>{
+ const {validateSfnt}=await import('../src/validate.js');
+ function without(input,tag){const b=Uint8Array.from(input),v=new DataView(b.buffer);const count=v.getUint16(4);let out=0;for(let i=0;i<count;i++){const at=12+i*16;if(String.fromCharCode(...b.slice(at,at+4))===tag)continue;b.copyWithin(12+out*16,at,at+16);out++}v.setUint16(4,out);const power=2**Math.floor(Math.log2(out));v.setUint16(6,power*16);v.setUint16(8,Math.log2(power));v.setUint16(10,out*16-power*16);return b}
+ function table(bytes,tag){const v=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);for(let i=0;i<v.getUint16(4);i++){const at=12+16*i;if(String.fromCharCode(...bytes.slice(at,at+4))===tag)return bytes.slice(v.getUint32(at+8),v.getUint32(at+8)+v.getUint32(at+12));}throw Error(tag)}
+ for(const kind of ['ttf','otf']){
+  const source=new Uint8Array(await readFile('test/fixtures/fixture.'+kind));const nameless=without(source,'name'),saved=Uint8Array.from(nameless);
+  assert.equal(validateSfnt(nameless),kind);assert.deepEqual(await inspectFont(nameless),await inspectFont(source));
+  const output=await convert(nameless,{format:'otf'}),reference=await convert(source,{format:'otf'});
+  assert.equal(validateSfnt(output),'otf');assert.deepEqual(nameless,saved);if(kind==='ttf')assert(table(output,'name').length>0);
+  for(const tag of ['cmap','hmtx','maxp'])assert.deepEqual(table(output,tag),table(reference,tag));
+  if(kind==='ttf')for(const required of ['head','hhea','hmtx','maxp','cmap','glyf','loca'])assert.throws(()=>validateSfnt(without(nameless,required)),{code:'INVALID_FONT'});
+ }
+});

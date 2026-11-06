@@ -35,7 +35,9 @@ export function validateSfnt(bytes, { preserveTables = false } = {}) {
   // Some CFF fonts carry the TrueType version despite containing no glyf/loca.
   // Infer only this unambiguous mismatch; never choose between mixed outline sets.
   if (signature === 0x00010000 && tables.has('CFF ') && !tables.has('glyf') && !tables.has('loca')) signature = 0x4f54544f;
-  for (const required of ['head', 'hhea', 'hmtx', 'maxp', 'cmap', 'name']) {
+  // Subset fonts can omit naming metadata; FontForge supplies output names.
+  // Keep all structural, metrics, character-map and outline checks mandatory.
+  for (const required of ['head', 'hhea', 'hmtx', 'maxp', 'cmap']) {
     if (!tables.has(required)) invalid();
   }
   if (signature !== 0x4f54544f && tables.has('EBDT') && tables.has('EBLC') && (!tables.has('glyf') || [...Array(count).keys()].some(i => view.getUint32(12+i*16) === 0x676c7966 && view.getUint32(24+i*16) === 0))) return 'otb';
