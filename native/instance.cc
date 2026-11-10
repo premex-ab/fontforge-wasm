@@ -11,7 +11,7 @@
 extern "C" int ff_instance(const char *input, const char *output, const char *coordinates) {
     FILE *f=fopen(input,"rb");if (!f) return 1;
     fseek(f,0,SEEK_END);long n=ftell(f);rewind(f);
-    if (n<12 || n>16*1024*1024) {fclose(f);return 1;}
+    if (n<12 || n>25*1024*1024) {fclose(f);return 1;}
     std::vector<char> bytes(n);bool read=fread(bytes.data(),1,n,f)==size_t(n);fclose(f);if(!read)return 1;
     hb_blob_t *blob=hb_blob_create(bytes.data(),n,HB_MEMORY_MODE_READONLY,nullptr,nullptr);
     hb_face_t *face=hb_face_create(blob,0);

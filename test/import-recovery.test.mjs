@@ -11,7 +11,7 @@ test('restricted outlines need explicit permission and retain their embedding fl
 test('WOFF2 output is bounded independently of its estimated SFNT size',async()=>{
  const source=new Uint8Array(await readFile('test/fixtures/fixture.ttf'));const compressed=await convert(source,{format:'woff2'});const v=new DataView(compressed.buffer,compressed.byteOffset,compressed.byteLength);
  v.setUint32(16,v.getUint32(16)-4);const decoded=await convert(compressed,{format:'ttf'});assert.deepEqual(decoded,await convert(await convert(source,{format:'woff2'}),{format:'ttf'}));
- v.setUint32(16,17*1024*1024);await assert.rejects(convert(compressed,{format:'ttf'}));
+ v.setUint32(16,26*1024*1024);await assert.rejects(convert(compressed,{format:'ttf'}));
 });
 
 test('WOFF wrapping preserves variable axes without selecting an instance',async()=>{

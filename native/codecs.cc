@@ -7,7 +7,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
-static const size_t LIMIT = 16 * 1024 * 1024;
+static const size_t LIMIT = 25 * 1024 * 1024;
 static uint32_t u32(const uint8_t *p) { return (uint32_t(p[0])<<24)|(uint32_t(p[1])<<16)|(uint32_t(p[2])<<8)|p[3]; }
 static void put32(uint8_t *p, uint32_t v) { p[0]=v>>24; p[1]=v>>16; p[2]=v>>8; p[3]=v; }
 static void put16(uint8_t *p, unsigned v) { p[0]=v>>8; p[1]=v; }
