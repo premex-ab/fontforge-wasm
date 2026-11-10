@@ -7,12 +7,12 @@ export class FontForgeError extends Error {
   }
 }
 
-export const MAX_INPUT_BYTES = 16 * 1024 * 1024;
+export const MAX_INPUT_BYTES = 25 * 1024 * 1024;
 const unsupported = new Set(['fvar', 'CFF2', 'COLR', 'CBDT', 'sbix', 'SVG ']);
 
 export function validateSfnt(bytes, { preserveTables = false } = {}) {
   if (!(bytes instanceof Uint8Array)) throw new TypeError('Input must be a Uint8Array.');
-  if (bytes.length > MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE', 'Maximum input size is 16 MiB.');
+  if (bytes.length > MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE', 'Maximum input size is 25 MiB.');
   const invalid = () => { throw new FontForgeError('INVALID_FONT', 'Invalid or truncated font.'); };
   if (bytes.length < 12) invalid();
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -49,7 +49,7 @@ export function validateSfnt(bytes, { preserveTables = false } = {}) {
 
 export function validateFont(bytes, hint, { preserveTables = false } = {}) {
   if (!(bytes instanceof Uint8Array)) throw new TypeError('Input must be a Uint8Array.');
-  if (bytes.length > MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE', 'Maximum input size is 16 MiB.');
+  if (bytes.length > MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE', 'Maximum input size is 25 MiB.');
   const invalid = () => { throw new FontForgeError('INVALID_FONT', 'Invalid or truncated font.'); };
   if (bytes.length < 12) invalid();
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -62,7 +62,7 @@ export function validateFont(bytes, hint, { preserveTables = false } = {}) {
     if (![0x10000, 0x4f54544f].includes(v.getUint32(4))) throw new FontForgeError('UNSUPPORTED_FONT', 'Only single-face static webfonts are supported.');
     const count = v.getUint16(12), size = v.getUint32(16);
     if (!count || count > 256 || size < 12 + count * 16) invalid();
-    if (size > MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE', 'Decoded font exceeds 16 MiB.');
+    if (size > MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE', 'Decoded font exceeds 25 MiB.');
     if (woff2) {
       if (!v.getUint32(20) || v.getUint32(20) > bytes.length - 48) invalid();
     } else {
@@ -203,7 +203,7 @@ export function alignSfntTables(input) {
   let size=directoryEnd;
   for(const t of tables) {
     size+=Math.ceil(t.length/4)*4;
-    if(size>MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE','Aligned font exceeds 16 MiB.');
+    if(size>MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE','Aligned font exceeds 25 MiB.');
   }
   const bytes=new Uint8Array(size), view=new DataView(bytes.buffer);
   bytes.set(input.subarray(0,directoryEnd));

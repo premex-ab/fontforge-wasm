@@ -131,7 +131,7 @@ Outline conversion is not lossless. Hinting and unsupported/custom tables can
 change or disappear. Inspect rendered text and validate output before production
 use. The tests cover synthetic outlines, Unicode mappings, advance widths, font
 names, ligature and kerning tables; they do not establish compatibility with all
-fonts. Input and decoded webfonts are limited to 16 MiB; UFO extraction is limited to
+fonts. Input and decoded webfonts are limited to 25 MiB; UFO extraction is limited to
 4096 entries and 64 MiB total, each file at most 16 MiB. WASM linear memory is
 limited to 512 MiB, and the default wall-clock timeout is 30 seconds (including startup/download). Worker overhead
 and JavaScript buffers consume additional memory.

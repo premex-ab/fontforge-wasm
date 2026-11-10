@@ -46,7 +46,7 @@ test('preserves compressed variable tables and rejects oversized decoded fonts',
     assert.equal(validateFont(decoded,'ttf',{preserveTables:true}),'ttf');
     await assert.rejects(convert(invalid,{format:'otf'}),{code:'STATIC_INSTANCE_REQUIRED'});
     const bytes=Buffer.from(await readFile(new URL(`ttf.${extension}`,root)));
-    bytes.writeUInt32BE(17*1024*1024,16);
+    bytes.writeUInt32BE(26*1024*1024,16);
     await assert.rejects(convert(bytes,{format:'ttf'}),{code:'INPUT_TOO_LARGE'});
     const corrupt=Buffer.from(await readFile(new URL(`ttf.${extension}`,root)));
     corrupt.fill(0,extension==='woff'?44+corrupt.readUInt16BE(12)*20:48);
