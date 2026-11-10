@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import createModule from '../dist/fontforge-core.mjs';
-import { FontForgeError, validateFont, validateSfnt, requiresEditPermission } from './validate.js';
+import { FontForgeError, validateFont, validateSfnt, alignSfntTables, requiresEditPermission } from './validate.js';
 
 import { getFormat } from './formats.js';
 import { extractCollection, wrapCollection, unwrapEot, wrapEot, unpackUfo, packUfo } from './containers.js';
@@ -52,6 +52,7 @@ export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIn
       if (format === inputFormat) return {bytes};
       if (format === 'woff2' || format === 'woff') {
         report({stage:'package',message:'Compressing original font tables as a webfont'});
+        bytes=alignSfntTables(bytes); module.FS.writeFile(inputPath,bytes);
         if (module.ccall(format === 'woff' ? 'ff_encode_woff' : 'ff_encode_woff2','number',['string','string'],[inputPath,'/packed.'+format]))
           throw new FontForgeError('CONVERSION_FAILED','Could not compress font tables.');
         const output = module.FS.readFile('/packed.'+format);

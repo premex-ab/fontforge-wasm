@@ -188,3 +188,41 @@ export function normalizeTrueType(input) {
   }
   return bytes;
 }
+
+// Repack unpadded SFNTs without redrawing outlines or dropping unknown tables.
+// WOFF2 requires four-byte table alignment even when other readers tolerate it.
+export function alignSfntTables(input) {
+  validateSfnt(input, {preserveTables:true});
+  const source=new DataView(input.buffer,input.byteOffset,input.byteLength);
+  const count=source.getUint16(4), directoryEnd=12+16*count;
+  const tables=Array.from({length:count},(_,i)=>{
+    const at=12+16*i;
+    return {at,offset:source.getUint32(at+8),length:source.getUint32(at+12)};
+  });
+  if (tables.every(t=>t.offset%4===0)) return input;
+  let size=directoryEnd;
+  for(const t of tables) {
+    size+=Math.ceil(t.length/4)*4;
+    if(size>MAX_INPUT_BYTES) throw new FontForgeError('INPUT_TOO_LARGE','Aligned font exceeds 16 MiB.');
+  }
+  const bytes=new Uint8Array(size), view=new DataView(bytes.buffer);
+  bytes.set(input.subarray(0,directoryEnd));
+  let offset=directoryEnd,head;
+  const checksum=(start,length)=>{
+    let sum=0;
+    for(let at=start;at<start+length;at+=4) sum=(sum+view.getUint32(at))>>>0;
+    return sum;
+  };
+  for(const t of tables) {
+    bytes.set(input.subarray(t.offset,t.offset+t.length),offset);
+    view.setUint32(t.at+8,offset);
+    if(source.getUint32(t.at)===0x68656164) {
+      if(t.length<12) throw new FontForgeError('INVALID_FONT','Truncated head table.');
+      head=offset;view.setUint32(head+8,0);
+    }
+    view.setUint32(t.at+4,checksum(offset,Math.ceil(t.length/4)*4));
+    offset+=Math.ceil(t.length/4)*4;
+  }
+  view.setUint32(head+8,(0xb1b0afba-checksum(0,size))>>>0);
+  return bytes;
+}
