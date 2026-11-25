@@ -9,8 +9,10 @@ separate_arguments(GLIB_STATIC_FLAGS UNIX_COMMAND "${GLIB_STATIC_FLAGS}")
 target_link_libraries(fontforge-wasm PRIVATE fontforge ${GLIB_STATIC_FLAGS})
 set_target_properties(fontforge-wasm PROPERTIES OUTPUT_NAME fontforge-core SUFFIX .mjs
   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+# FontForge outline readers assume malloc/calloc succeeds. Stop allocation
+# failure before they dereference NULL; runtime.js exposes OUT_OF_MEMORY.
 target_link_options(fontforge-wasm PRIVATE
-  --no-entry -O2 -sEMULATE_FUNCTION_POINTER_CASTS=1
+  --no-entry -O2 -sABORTING_MALLOC=1 -sEMULATE_FUNCTION_POINTER_CASTS=1
   -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=web,worker,node
   -sALLOW_MEMORY_GROWTH=1 -sMAXIMUM_MEMORY=536870912 -sSTACK_SIZE=8388608
   -sFILESYSTEM=1 -sFORCE_FILESYSTEM=1
