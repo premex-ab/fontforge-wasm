@@ -83,6 +83,11 @@ export async function run({ bytes, format, wasmBinary, inputFormat: hint, faceIn
     }
     return { bytes: output };
   } catch (error) {
-    return { error: { code: error.code || 'CONVERSION_FAILED', message: error.message || String(error) } };
+    // FontForge assumes successful allocations in its outline readers. The
+    // native build aborts on allocation failure before a null pointer is used.
+    const message = error.message || String(error);
+    if (/^Aborted\((?:OOM|Cannot enlarge memory arrays\b)/.test(message))
+      return { error: { code: 'OUT_OF_MEMORY', message: 'This font needs more memory than the local converter allows. Use server conversion for this font.' } };
+    return { error: { code: error.code || 'CONVERSION_FAILED', message } };
   }
 }
